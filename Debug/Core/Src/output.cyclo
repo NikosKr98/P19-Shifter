@@ -1,0 +1,6 @@
+../Core/Src/output.c:11:6:Output	15
+../Core/Src/output.c:71:6:CAN_Tx	1
+../Core/Src/output.c:85:6:shiftup_activation	1
+../Core/Src/output.c:93:6:shiftdown_activation	1
+../Core/Src/output.c:101:6:neutral_activation	1
+../Core/Src/output.c:111:6:end_of_shift	7
