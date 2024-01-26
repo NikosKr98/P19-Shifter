@@ -52,20 +52,30 @@ void Application(InputStruct *input, ApplicationStruct *application){
 
 
 	// UP BUTTON REQUEST CONFIRMATION CHECK !
-	if(input->up_button_request && !application-> up_port_state){
+	if(input->up_button_request && application->up_button_status==0 && button_previous<current && application-> up_port_state ==0){
+		button_previous=current;
+		button_previous+=button_interval;
 		application->up_button_out = 1;
+		application->up_button_status=1;
 	}
-	else{
+	else if(!input->up_button_request && application->up_button_status){
 		application->up_button_out =0;
+		application->up_button_status=0;
 	}
 
 
 	// DOWNM BUTTON REQUEST CONFIRMATION CHECK !
-	if(input-> down_button_request && !application-> down_port_state){
+	if(input-> down_button_request && application->down_button_status==0 && button_previous<current && application-> down_port_state==0){
+		button_previous=current;
+		button_previous+=button_interval;
 		application->down_button_out = 1;
+		application->down_button_status=1;
+
 	}
-	else{
+	else if(!input->down_button_request && application->down_button_status){
 		application->down_button_out =0;
+		application->down_button_status=0;
+
 	}
 
 

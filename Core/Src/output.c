@@ -58,8 +58,9 @@ void Output( ApplicationStruct *application){
 	if(msg_previous<current){
 
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		TxData[0]=application->down_port_state;
-		TxData[1]=application->up_port_state;
+
+		TxData[0]=(application->down_port_state || application->up_port_state);
+		TxData[1]=application->current_gear;
 
 		msg_previous=current;
 		msg_previous+=msg_interval;
@@ -121,7 +122,7 @@ void end_of_shift(ApplicationStruct *application) {  //Shift Handling
 		application-> current_gear = application->target_gear;
 	}
 
-	if ((application->up_port_state || application->down_port_state) && HAL_GetTick() >= shift_end_time + 200) {
+	if ((application->up_port_state || application->down_port_state) && HAL_GetTick() >= shift_end_time + 500) {
 
 		application->up_port_state = 0;
 		application->down_port_state=0;

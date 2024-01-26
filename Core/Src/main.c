@@ -44,7 +44,7 @@
 
 
 #define default_msg_interval 100
-#define default_button_interval 200
+#define default_button_interval 100
 
 
 
@@ -158,16 +158,8 @@ int main(void)
   {
 	  current=HAL_GetTick();
 	  Input_Read(&myInput);
-
-	  if(button_previous<current){
-
-
 	  Application(&myInput,&myApplication);
 	  Output(&myApplication);
-
-	  button_previous=current;
-	  button_previous+=button_interval;
-	  }
 
     /* USER CODE END WHILE */
 
