@@ -13,13 +13,17 @@ void Output( ApplicationStruct *application){
 	end_of_shift(application);
 
 
-	if(application->up_button_out && button_previous < current){
+	if(application->up_button_out){
 		application->target_gear++;
+
+		if(application->target_gear!=application->current_gear+1){
+			application->target_gear--;
+		}
 
 		if(application->target_gear > total_gears){
 			application->target_gear=5;
 		}
-		else if(application->target_gear > 1 && application->target_gear <= 5 && application->current_gear != 5){
+		else if(application->target_gear > 1 && application->target_gear <= 5){
 			shiftup_activation(application);
 		}
 		else if(application->target_gear == 1 && application->clutch_detection){
@@ -28,16 +32,15 @@ void Output( ApplicationStruct *application){
 		else {
 			application->target_gear = application-> current_gear;
 		}
-
-		button_previous=current;
-		button_previous+=button_interval;
 	}
 
 
-	if(application->down_button_out && button_previous < current ){
-
+	if(application->down_button_out){
 		application->target_gear--;
 
+		if(application->target_gear!= application->current_gear-1){
+			application->target_gear++;
+		}
 
 		if(application->target_gear < 0){
 			application->target_gear=0;
@@ -49,9 +52,6 @@ void Output( ApplicationStruct *application){
 		else if(application->target_gear>=1){
 			shiftdown_activation(application);
 		}
-
-		button_previous=current;
-		button_previous+=button_interval;
 	}
 
 
@@ -92,7 +92,7 @@ void shiftup_activation(ApplicationStruct *application){ // Shift up function
 }
 
 void shiftdown_activation(ApplicationStruct *application){ // Shift down function
-	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, GPIO_PIN_SET);
 
 	application->down_port_state = 1;
 
@@ -120,10 +120,6 @@ void end_of_shift(ApplicationStruct *application) {  //Shift Handling
 		HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, GPIO_PIN_RESET);
 
 		application-> current_gear = application->target_gear;
-	}
-
-	if ((application->up_port_state || application->down_port_state) && HAL_GetTick() >= shift_end_time + 500) {
-
 		application->up_port_state = 0;
 		application->down_port_state=0;
 	}

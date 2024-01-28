@@ -14,7 +14,7 @@
 #include "gpio_init.h"
 
 
-#define shifting_interval 300
+#define shifting_interval 500
 #define neutral_interval 10
 #define STEERING_ID 0x320
 

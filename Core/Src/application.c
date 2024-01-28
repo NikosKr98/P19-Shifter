@@ -22,12 +22,12 @@ void Application_init(ApplicationStruct *application){
 
 uint16_t gearTable[][2] = {
 
-    {3700, 3800},  // Gear 0
-    {3930, 3980},  // Gear 1
-    {3300, 3340},  // Gear 2
-    {2350, 2400},  // Gear 3
-    {1400, 1500},  // Gear 4
-    {500, 600}     // Gear 5
+    {3600, 3750},  // Gear 0
+    {3900, 4000},  // Gear 1
+    {3200, 3300},  // Gear 2
+    {2250, 2400},  // Gear 3
+    {1300, 1500},  // Gear 4
+    {400, 600}     // Gear 5
 
 };
 
@@ -39,12 +39,12 @@ uint16_t calculateActualGear(InputStruct *input) {
             return gear;
         }
     }
-    return 255; // If no match is found, return 255!
+    return 255; // If no match found, return 255!
 }
 
 
 void Application(InputStruct *input, ApplicationStruct *application){
-//
+
 //	if(application->current_gear != application -> actual_gear){
 //		application->current_gear = application -> actual_gear;
 //		application->target_gear = application -> actual_gear;
@@ -52,7 +52,7 @@ void Application(InputStruct *input, ApplicationStruct *application){
 
 
 	// UP BUTTON REQUEST CONFIRMATION CHECK !
-	if(input->up_button_request && application->up_button_status==0 && button_previous<current && application-> up_port_state ==0){
+	if(input->up_button_request && !application->up_button_status && button_previous<current && !application-> up_port_state){
 		button_previous=current;
 		button_previous+=button_interval;
 		application->up_button_out = 1;
@@ -65,7 +65,7 @@ void Application(InputStruct *input, ApplicationStruct *application){
 
 
 	// DOWNM BUTTON REQUEST CONFIRMATION CHECK !
-	if(input-> down_button_request && application->down_button_status==0 && button_previous<current && application-> down_port_state==0){
+	if(input-> down_button_request && !application->down_button_status && button_previous<current && !application-> down_port_state){
 		button_previous=current;
 		button_previous+=button_interval;
 		application->down_button_out = 1;
@@ -79,13 +79,16 @@ void Application(InputStruct *input, ApplicationStruct *application){
 	}
 
 
-	application->clutch_position = input->clutch_position ;
+	application->clutch_position = input->clutch_position;
 
 	application->clutch_detection = (application->clutch_position > clutch_detection_threshold) ? 1 : 0;
 	//CLUTCH REACHED THE THRESHOLD
 
 	application->actual_gear = calculateActualGear(input);
 }
+
+
+
 
 
 

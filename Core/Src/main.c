@@ -44,7 +44,7 @@
 
 
 #define default_msg_interval 100
-#define default_button_interval 100
+#define default_button_interval 50
 
 
 
@@ -121,7 +121,6 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-
 	HAL_Init();
 
   /* USER CODE BEGIN Init */
@@ -142,6 +141,7 @@ int main(void)
   MX_ADC1_Init();
   MX_CAN_Init();
   MX_USART1_UART_Init();
+  HAL_GPIO_WritePin(VCC_GPIO_Port, VCC_Pin, GPIO_PIN_SET);
   /* USER CODE BEGIN 2 */
 
   HAL_ADC_Start(&hadc1);
@@ -160,6 +160,8 @@ int main(void)
 	  Input_Read(&myInput);
 	  Application(&myInput,&myApplication);
 	  Output(&myApplication);
+
+
 
     /* USER CODE END WHILE */
 
