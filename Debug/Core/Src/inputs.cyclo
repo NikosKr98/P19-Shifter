@@ -1,0 +1,5 @@
+../Core/Src/inputs.c:42:6:InitInputs	1
+../Core/Src/inputs.c:46:6:ReadInputs	2
+../Core/Src/inputs.c:83:6:HAL_CAN_RxFifo0MsgPendingCallback	3
+../Core/Src/inputs.c:111:6:HAL_CAN_ErrorCallback	1
+../Core/Src/inputs.c:116:9:calculateActualNGear	4

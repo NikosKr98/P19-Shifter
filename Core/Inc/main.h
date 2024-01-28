@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "gpio_init.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -57,7 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-
+#define LED_Pin GPIO_PIN_13
+#define LED_GPIO_Port GPIOC
+#define VCC_Pin GPIO_PIN_0
+#define VCC_GPIO_Port GPIOA
+#define DOWN_PORT_Pin GPIO_PIN_6
+#define DOWN_PORT_GPIO_Port GPIOA
+#define UP_PORT_Pin GPIO_PIN_7
+#define UP_PORT_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

@@ -1,3 +1,0 @@
-../Core/Src/application.c:10:6:Application_init	16	static
-../Core/Src/application.c:35:10:calculateActualGear	24	static
-../Core/Src/application.c:46:6:Application	16	static
