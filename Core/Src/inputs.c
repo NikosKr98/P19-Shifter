@@ -45,22 +45,6 @@ void InitInputs(void){
 
 void ReadInputs(InputStruct *input){
 
-//	HAL_ADC_PollForConversion(&hadc1,100);
-//	uint16_t gear_value = HAL_ADC_GetValue(&hadc1);
-
-//	input->adc_counter++;
-//
-//	/* Normal Averaging */
-//	if(input->adc_counter < ADC_BUFFER_SIZE){
-//		input->gear_value1 += gear_value;
-//	}
-//	else {
-//		input->actual_gear = input->gear_value1 / input->adc_counter;
-//		gear_value = 0;
-//		input->gear_value1=0;
-//		input->adc_counter = 0;
-//	}
-
 	// NGear Conditioning
 	input->NGear = calculateActualNGear(NGearRawFiltered);
 
@@ -122,8 +106,6 @@ uint8_t calculateActualNGear(uint16_t NGearRaw) {
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 	// we enter here every time ADC_BUFFER_SIZE/2 samples have been moved to the adcRawValue buffer by the DMA
 
-	// TODO: to be refined... NOT SURE ABOUT ARRAY LIMITS (should take edge cases)
-
 	uint32_t adcRawAccumulator = 0;
 	int adcBufferIndexMin, adcBufferIndexMax;
 
@@ -138,8 +120,9 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 		adcBufferIndexMax = ADC_BUFFER_SIZE/2;
 	}
 
+
 	for(int i = adcBufferIndexMin; i < adcBufferIndexMax; i++) {
-		adcRawAccumulator += adcRawValue[0];
+		adcRawAccumulator += adcRawValue[i];
 	}
 
 	NGearRawFiltered = adcRawAccumulator / (ADC_BUFFER_SIZE/2);

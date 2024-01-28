@@ -65,11 +65,11 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 
@@ -114,19 +114,18 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_TIM3_Init();
-  MX_TIM1_Init();
   MX_ADC1_Init();
   MX_CAN_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_Base_Start(&htim1);		// general timer set at 1Mz for timing reasons (call __HAL_TIM_GET_COUNTER(&htim3) to get timer value)
+  HAL_TIM_Base_Start(&htim1);		// general 1MHz timer for timing
   HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
 //  HAL_TIM_Base_Start(&htim2);		// general timer for PWM use
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE/2);
-  //TODO: add also DMA start
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
 
   InitInputs();
   InitApplication();
@@ -320,9 +319,6 @@ static void MX_CAN_Init(void)
    if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig1)!=HAL_OK) {
  	  Error_Handler();
  	}
-   if(HAL_CAN_Start(&hcan)!=HAL_OK) {
- 	  Error_Handler();
-   }
 
 
    if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
@@ -567,7 +563,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim == &htim3) {	// Code Cycle interrupt
 		BCycleTimerFlag = 1;

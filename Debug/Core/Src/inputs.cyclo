@@ -1,6 +1,6 @@
 ../Core/Src/inputs.c:42:6:InitInputs	1
 ../Core/Src/inputs.c:46:6:ReadInputs	1
-../Core/Src/inputs.c:79:6:HAL_CAN_RxFifo0MsgPendingCallback	3
-../Core/Src/inputs.c:107:6:HAL_CAN_ErrorCallback	1
-../Core/Src/inputs.c:112:9:calculateActualNGear	4
-../Core/Src/inputs.c:122:6:HAL_ADC_ConvHalfCpltCallback	3
+../Core/Src/inputs.c:63:6:HAL_CAN_RxFifo0MsgPendingCallback	3
+../Core/Src/inputs.c:91:6:HAL_CAN_ErrorCallback	1
+../Core/Src/inputs.c:96:9:calculateActualNGear	4
+../Core/Src/inputs.c:106:6:HAL_ADC_ConvHalfCpltCallback	3

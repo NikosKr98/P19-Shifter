@@ -17,7 +17,7 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
-#define ADC_BUFFER_SIZE 306*2	// is the size of the buffer, 2 halves of 306 samples
+#define ADC_BUFFER_SIZE 375*2	// is the size of the buffer, 2 halves of 306 samples
 
 
 extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
@@ -27,6 +27,7 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern CAN_HandleTypeDef hcan;
 extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim1;
 
 typedef struct {
 

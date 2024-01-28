@@ -71,7 +71,7 @@ void WriteOutputs(OutputStruct *output) {
 
 
 
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+
 
 		TxData[0]=(output->down_port_state || output->up_port_state);
 		TxData[1]=output->current_gear;
