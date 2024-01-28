@@ -5,8 +5,6 @@
  *      Author: NikosKr
  */
 
-
-
 #ifndef INC_INPUTS_H_
 #define INC_INPUTS_H_
 
@@ -19,6 +17,11 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
+#define ADC_BUFFER_SIZE 306*2	// is the size of the buffer, 2 halves of 306 samples
+
+
+extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
+
 extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_adc1;
 extern CAN_HandleTypeDef hcan;
@@ -26,14 +29,6 @@ extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart1;
 
 typedef struct {
-
-	uint8_t  up_button_request;
-	uint8_t  down_button_request;
-	uint8_t  launch_button_request;
-	uint16_t clutch_position;
-	uint32_t gear_value1;
-	uint32_t actual_gear;
-	uint16_t adc_counter;
 
 	uint8_t NGear;				// actual gear based on filtered gear potentiometer
 	uint8_t BUpShiftRequest;	// steering wheel UpShift request (reflects the state of the paddle)

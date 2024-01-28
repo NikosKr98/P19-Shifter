@@ -55,11 +55,7 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
-CAN_HandleTypeDef hcan;
-TIM_HandleTypeDef htim2;
-UART_HandleTypeDef huart1;
+uint16_t adcRawValue[ADC_BUFFER_SIZE];
 
 volatile uint8_t BCycleTimerFlag = 0;
 /* USER CODE END PV */
@@ -129,7 +125,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
 //  HAL_TIM_Base_Start(&htim2);		// general timer for PWM use
 
-  HAL_ADC_Start(&hadc1);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE/2);
   //TODO: add also DMA start
 
   InitInputs();

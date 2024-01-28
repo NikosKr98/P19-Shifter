@@ -13,7 +13,7 @@
 #include "stdlib.h"
 #include <stdint.h>
 
-// macros and quicj functions ...
+// macros and quick functions ...
 
 
 #endif /* INC_UTILS_H_ */

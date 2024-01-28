@@ -49,7 +49,7 @@ void RunApplication(InputStruct *input, OutputStruct *output){
 //	}
 
 
-	output->clutch_position = input->clutch_position;
+//	output->clutch_position = input->clutch_position;
 
 	output->clutch_detection = (output->clutch_position > clutch_detection_threshold) ? 1 : 0;
 	//CLUTCH REACHED THE THRESHOLD

@@ -8,8 +8,6 @@
 #include "inputs.h"
 
 
-#define ADC_BUFFER_SIZE 306
-
 
 
 // private variables
@@ -34,8 +32,8 @@ uint16_t nEngineCAN;
 uint8_t CANErrorCount;
 
 // ADC
-uint16_t NGearRaw;
-
+uint16_t NGearRawFiltered;
+volatile uint8_t bufferSide;	// flag to determine the first or second half of the adc buffer for averaging
 
 // private functions declaration
 uint8_t calculateActualNGear(uint16_t NGearRaw);
@@ -47,28 +45,24 @@ void InitInputs(void){
 
 void ReadInputs(InputStruct *input){
 
-	HAL_ADC_PollForConversion(&hadc1,100);
-	uint16_t gear_value = HAL_ADC_GetValue(&hadc1);
+//	HAL_ADC_PollForConversion(&hadc1,100);
+//	uint16_t gear_value = HAL_ADC_GetValue(&hadc1);
 
-	input->adc_counter++;
-
-	/* Normal Averaging */
-	if(input->adc_counter < ADC_BUFFER_SIZE){
-		input->gear_value1 += gear_value;
-	}
-	else {
-		input->actual_gear = input->gear_value1 / input->adc_counter;
-		gear_value = 0;
-		input->gear_value1=0;
-		input->adc_counter = 0;
-	}
+//	input->adc_counter++;
+//
+//	/* Normal Averaging */
+//	if(input->adc_counter < ADC_BUFFER_SIZE){
+//		input->gear_value1 += gear_value;
+//	}
+//	else {
+//		input->actual_gear = input->gear_value1 / input->adc_counter;
+//		gear_value = 0;
+//		input->gear_value1=0;
+//		input->adc_counter = 0;
+//	}
 
 	// NGear Conditioning
-
-	// filtering...
-	input->NGear = calculateActualNGear(NGearRaw);
-
-
+	input->NGear = calculateActualNGear(NGearRawFiltered);
 
 
 	// transfer CAN data into myInputs struct
@@ -102,7 +96,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 
 	 case ECU_RX_ID:
 
-		 nEngineCAN = CANRxData[0];
+		 nEngineCAN = CANRxData[0] << 8 | CANRxData[1];
 
 		 break;
 
@@ -123,4 +117,30 @@ uint8_t calculateActualNGear(uint16_t NGearRaw) {
         }
     }
     return 255; // If no match found, return 255!
+}
+
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+	// we enter here every time ADC_BUFFER_SIZE/2 samples have been moved to the adcRawValue buffer by the DMA
+
+	// TODO: to be refined... NOT SURE ABOUT ARRAY LIMITS (should take edge cases)
+
+	uint32_t adcRawAccumulator = 0;
+	int adcBufferIndexMin, adcBufferIndexMax;
+
+	if(bufferSide == 1) {
+		bufferSide = 0;		// we change the buffer side flag for the next iteration
+		adcBufferIndexMin = ADC_BUFFER_SIZE/2;
+		adcBufferIndexMax = ADC_BUFFER_SIZE;
+	}
+	else {
+		bufferSide = 1;
+		adcBufferIndexMin = 0;
+		adcBufferIndexMax = ADC_BUFFER_SIZE/2;
+	}
+
+	for(int i = adcBufferIndexMin; i < adcBufferIndexMax; i++) {
+		adcRawAccumulator += adcRawValue[0];
+	}
+
+	NGearRawFiltered = adcRawAccumulator / (ADC_BUFFER_SIZE/2);
 }
