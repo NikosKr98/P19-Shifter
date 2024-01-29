@@ -66,21 +66,24 @@ void RunApplication(InputStruct *input, OutputStruct *output){
 
 	case SHIFTER_IDLE:
 		IDLE_Run();
+		IDLE_Event();
 		break;
 	case SHIFTER_PRESHIFT:
 		PRESHIFT_Run();
+		PRESHIFT_Event();
 		break;
 	case SHIFTER_SHIFTING:
 		SHIFTING_Run();
+		SHIFTING_Event();
 		break;
 	case SHIFTER_POSTSHIFT:
 		POSTSHIFT_Run();
+		POSTSHIFT_Event();
 		break;
 	case SHIFTER_ERROR:
 		ERROR_Run();
+		ERROR_Event();
 		break;
-//	case default:
-//		break;
 	}
 
 
@@ -95,6 +98,12 @@ void IDLE_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTER_IDLE;
 }
+void IDLE_Exit(void) {
+
+}
+void IDLE_Event(void) {
+
+}
 void IDLE_Run(void) {
 
 
@@ -103,19 +112,19 @@ void IDLE_Run(void) {
 //		PRESHIFT_Entry();
 //	}
 }
-void IDLE_Exit(void) {
-
-}
 
 
 void PRESHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTER_PRESHIFT;
 }
+void PRESHIFT_Exit(void) {
+
+}
 void PRESHIFT_Run(void) {
 
 }
-void PRESHIFT_Exit(void) {
+void PRESHIFT_Event(void) {
 
 }
 
@@ -124,10 +133,13 @@ void SHIFTING_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTER_SHIFTING;
 }
+void SHIFTING_Exit(void) {
+
+}
 void SHIFTING_Run(void) {
 
 }
-void SHIFTING_Exit(void) {
+void SHIFTING_Event(void) {
 
 }
 
@@ -136,10 +148,13 @@ void POSTSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTER_POSTSHIFT;
 }
+void POSTSHIFT_Exit(void) {
+
+}
 void POSTSHIFT_Run(void) {
 
 }
-void POSTSHIFT_Exit(void) {
+void POSTSHIFT_Event(void) {
 
 }
 
@@ -148,9 +163,12 @@ void ERROR_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTER_ERROR;
 }
+void ERROR_Exit(void) {
+
+}
 void ERROR_Run(void) {
 
 }
-void ERROR_Exit(void) {
+void ERROR_Event(void) {
 
 }

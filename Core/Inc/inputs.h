@@ -23,13 +23,35 @@
 extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
 
 extern ADC_HandleTypeDef hadc1;
-extern DMA_HandleTypeDef hdma_adc1;
 extern CAN_HandleTypeDef hcan;
-extern TIM_HandleTypeDef htim2;
-extern UART_HandleTypeDef huart1;
-extern TIM_HandleTypeDef htim1;
 
-typedef struct {
+
+/* EVENT DEFINITION */
+typedef enum _Event {
+	UPSHIFT_PRESS_EVT,
+	DNSHIFT_PRESS_EVT,
+	LAUNCH_PRESS_EVT,
+	CLUTCH_PRESS_EVT
+} Event;
+
+/* FAULT DEFINITION */
+typedef enum _Fault {
+	BOTH_PADS_PRESSED_FAULT = 0,			// right hand side limit switch
+	LIMIT_L_PRESSED_FAULT,			// left hand side limit switch
+
+	UPSHIFT_CAN_FAULT,
+	DNSHIFT_CAN_FAULT,
+	UPSHIFT_ANALOG_FAULT,
+	DNSHIFT_ANALOG_FAULT,
+	CLUTCHPADDLE_CAN_FAULT,
+	CLUTCHPADDLE_ANALOG_FAULT,
+
+
+} Fault;
+
+typedef struct _InputStruct {
+	uint32_t nEventStatus; 		// 32-bit bitfield for events
+	uint32_t nFaultStatus; 		// 32-bit bitfield for faults
 
 	uint8_t NGear;				// actual gear based on filtered gear potentiometer
 	uint8_t BUpShiftRequest;	// steering wheel UpShift request (reflects the state of the paddle)
@@ -38,12 +60,15 @@ typedef struct {
 	int8_t rClutchPaddle;		// Steering wheel clutch paddle percentage (can be from -104% to 104% to allow margin)
 	int16_t nEngine;			// engine RPM taken from the ECU
 
-	uint8_t NCANErrors;			// CAN Receiving error count
+	uint8_t NCANErrors;			// CAN Bus error count
+	uint8_t NCANRxErrors;		// CAN message receive error count
+
 	float VSupply;				// PCB Voltage Input Diagnostic
 
 } InputStruct;
 
 void InitInputs(void);
 void ReadInputs(InputStruct *input);
+uint8_t CheckFaults();
 
 #endif /* INC_INPUTS_H_ */

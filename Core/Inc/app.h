@@ -50,23 +50,28 @@ void RunApplication(InputStruct *input, OutputStruct *output);
 
 
 void IDLE_Entry(void);
-void IDLE_Run(void);
 void IDLE_Exit(void);
+void IDLE_Event(void);
+void IDLE_Run(void);
 
 void PRESHIFT_Entry(void);
-void PRESHIFT_Run(void);
 void PRESHIFT_Exit(void);
+void PRESHIFT_Event(void);
+void PRESHIFT_Run(void);
 
 void SHIFTING_Entry(void);
-void SHIFTING_Run(void);
 void SHIFTING_Exit(void);
+void SHIFTING_Event(void);
+void SHIFTING_Run(void);
 
 void POSTSHIFT_Entry(void);
-void POSTSHIFT_Run(void);
 void POSTSHIFT_Exit(void);
+void POSTSHIFT_Event(void);
+void POSTSHIFT_Run(void);
 
 void ERROR_Entry(void);
-void ERROR_Run(void);
 void ERROR_Exit(void);
+void ERROR_Event(void);
+void ERROR_Run(void);
 
 #endif /* INC_APP_H_ */

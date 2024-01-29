@@ -1,9 +1,9 @@
 ../Core/Src/inputs.c:43:6:ReadInputs	1
-../Core/Src/inputs.c:68:6:InitInputs	1
-../Core/Src/inputs.c:73:6:CAN_RX	4
-../Core/Src/inputs.c:107:9:calculateActualNGear	4
-../Core/Src/inputs.c:118:10:MyHalfBufferAverage	3
-../Core/Src/inputs.c:132:6:HAL_CAN_RxFifo0MsgPendingCallback	1
-../Core/Src/inputs.c:136:6:HAL_CAN_RxFifo1MsgPendingCallback	1
-../Core/Src/inputs.c:140:6:HAL_CAN_ErrorCallback	1
-../Core/Src/inputs.c:144:6:HAL_ADC_ConvHalfCpltCallback	2
+../Core/Src/inputs.c:69:6:InitInputs	1
+../Core/Src/inputs.c:74:6:CAN_RX	4
+../Core/Src/inputs.c:108:9:calculateActualNGear	4
+../Core/Src/inputs.c:119:10:MyHalfBufferAverage	3
+../Core/Src/inputs.c:133:6:HAL_CAN_RxFifo0MsgPendingCallback	1
+../Core/Src/inputs.c:137:6:HAL_CAN_RxFifo1MsgPendingCallback	1
+../Core/Src/inputs.c:141:6:HAL_CAN_ErrorCallback	1
+../Core/Src/inputs.c:145:6:HAL_ADC_ConvHalfCpltCallback	2

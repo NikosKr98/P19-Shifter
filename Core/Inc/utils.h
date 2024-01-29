@@ -19,7 +19,7 @@
 #define USB_DEBUG 0					// debug information through ST-Link Virtual COM Port (1 = enable, 0 = disable)
 
 extern UART_HandleTypeDef huart1;
-extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim1;
 
 // MACRO DEFINITIONS
 #define BIT(var_,pos_)     ((var_ >> pos_) & 0x1)

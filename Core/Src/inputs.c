@@ -61,7 +61,8 @@ void ReadInputs(InputStruct *input){
 	input->rClutchPaddle = rClutchPaddleCAN;
 	input->nEngine = nEngineCAN;
 
-	input->NCANErrors = NCANErrorCount;	// update can error count if any
+	input->NCANErrors = NCANErrorCount;			// update can error count
+	input->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
 
 }
 

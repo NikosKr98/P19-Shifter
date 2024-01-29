@@ -12,6 +12,8 @@
 #include "inputs.h"
 #include "app.h"
 
+extern TIM_HandleTypeDef htim2;
+
 #define shifting_interval 500
 #define neutral_interval 10
 #define STEERING_ID 0x320
