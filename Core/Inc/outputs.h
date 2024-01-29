@@ -8,6 +8,7 @@
 #ifndef INC_OUTPUTS_H_
 #define INC_OUTPUTS_H_
 
+#include "Utils.h"
 #include "inputs.h"
 #include "app.h"
 

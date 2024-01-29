@@ -29,25 +29,30 @@ uint8_t BLaunchRequestCAN;
 int8_t rClutchPaddleCAN;
 uint16_t nEngineCAN;
 
-uint8_t CANErrorCount;
+volatile uint8_t NCANErrorCount;
+volatile uint16_t NCanGetRxErrorCount=0;
 
 // ADC
 uint16_t NGearRawFiltered;
-volatile uint8_t bufferSide;	// flag to determine the first or second half of the adc buffer for averaging
+volatile uint8_t NAdcBufferSide; // flag to determine the first or second half of the adc buffer for averaging
 
 // private functions declaration
 uint8_t calculateActualNGear(uint16_t NGearRaw);
-
-
-void InitInputs(void){
-
-}
+uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side);
 
 void ReadInputs(InputStruct *input){
 
 	// NGear Conditioning
-	input->NGear = calculateActualNGear(NGearRawFiltered);
 
+		// averaging
+		NGearRawFiltered = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide);
+
+		// mapping
+		input->NGear = calculateActualNGear(NGearRawFiltered);
+
+	// PCB Supply Voltage Conditioning
+//	input->VSupply = (float)ADC_VALUE * 3.3 / 4095 * (Voltage divider gain)
+	// TODO: set the analog input and decide filtering (or not)
 
 	// transfer CAN data into myInputs struct
 	input->BUpShiftRequest = BUpShiftRequestCAN;
@@ -56,40 +61,46 @@ void ReadInputs(InputStruct *input){
 	input->rClutchPaddle = rClutchPaddleCAN;
 	input->nEngine = nEngineCAN;
 
-	input->NCANErrors = CANErrorCount;	// update can error count if any
+	input->NCANErrors = NCANErrorCount;	// update can error count if any
+
+}
+
+void InitInputs(void){
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
 }
 
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	// TODO: refine the function
+void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
+
 	CAN_RxHeaderTypeDef RxHeader;
-	uint8_t CANRxData[8];
+	uint8_t RxBuffer[8];
 
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, CANRxData);
+	if(HAL_CAN_GetRxMessage(hcan, RxFifo, &RxHeader, RxBuffer) != HAL_OK) {
+		NCanGetRxErrorCount++;
+		return;
+	}
 
+	 //Don't forget to add and enable filters for each message
 	switch(RxHeader.StdId) {
 
 	 case STEERING_RX_ID :
 
-		BUpShiftRequestCAN = CANRxData[0];
-		BDownShiftRequestCAN = CANRxData[1];
-		BLaunchRequestCAN = CANRxData[2];
-		rClutchPaddleCAN = CANRxData[3];
+		BUpShiftRequestCAN = RxBuffer[0];
+		BDownShiftRequestCAN = RxBuffer[1];
+		BLaunchRequestCAN = RxBuffer[2];
+		rClutchPaddleCAN = RxBuffer[3];
 
 		break;
 
 	 case ECU_RX_ID:
 
-		 nEngineCAN = CANRxData[0] << 8 | CANRxData[1];
+		 nEngineCAN = RxBuffer[0] << 8 | RxBuffer[1];
 
 		 break;
 
+	 default:
+		 break;
 	 }
-
-}
-
-void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
-	CANErrorCount++;
 }
 
 
@@ -103,27 +114,37 @@ uint8_t calculateActualNGear(uint16_t NGearRaw) {
     return 255; // If no match found, return 255!
 }
 
+
+uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side) {
+
+	uint32_t Accumulator=0;
+	uint16_t Offset = (side == 1 ? halfsize : 0);
+
+	for(uint16_t i=0; i<halfsize; i++) {
+		Accumulator += buffer[i + Offset];
+	}
+
+	Accumulator /= halfsize;
+	return (uint16_t)Accumulator;
+
+}
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
+	CAN_RX(hcan, CAN_RX_FIFO0);
+}
+
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
+	CAN_RX(hcan, CAN_RX_FIFO1);
+}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
+	NCANErrorCount++;
+}
+
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 	// we enter here every time ADC_BUFFER_SIZE/2 samples have been moved to the adcRawValue buffer by the DMA
 
-	uint32_t adcRawAccumulator = 0;
-	int adcBufferIndexMin, adcBufferIndexMax;
-
-	if(bufferSide == 1) {
-		bufferSide = 0;		// we change the buffer side flag for the next iteration
-		adcBufferIndexMin = ADC_BUFFER_SIZE/2;
-		adcBufferIndexMax = ADC_BUFFER_SIZE;
+	if(hadc == &hadc1) {
+		NAdcBufferSide ^= 1;	// changes from 0 to 1
 	}
-	else {
-		bufferSide = 1;
-		adcBufferIndexMin = 0;
-		adcBufferIndexMax = ADC_BUFFER_SIZE/2;
-	}
-
-
-	for(int i = adcBufferIndexMin; i < adcBufferIndexMax; i++) {
-		adcRawAccumulator += adcRawValue[i];
-	}
-
-	NGearRawFiltered = adcRawAccumulator / (ADC_BUFFER_SIZE/2);
 }

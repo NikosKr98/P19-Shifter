@@ -58,6 +58,11 @@ UART_HandleTypeDef huart1;
 uint16_t adcRawValue[ADC_BUFFER_SIZE];
 
 volatile uint8_t BCycleTimerFlag = 0;
+
+// public struct variables
+InputStruct myInput;
+OutputStruct myOutput;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,10 +82,6 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-// public struct variables
-InputStruct myInput;
-OutputStruct myOutput;
 
 /* USER CODE END 0 */
 
@@ -125,13 +126,10 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
 //  HAL_TIM_Base_Start(&htim2);		// general timer for PWM use
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
 
   InitInputs();
   InitApplication();
   InitOutputs();
-
-
 
   /* USER CODE END 2 */
 
@@ -281,13 +279,15 @@ static void MX_CAN_Init(void)
   }
   /* USER CODE BEGIN CAN_Init 2 */
 
+  	  // We setup and enable 2 filters for each message, one of FIFO0 and one for FIFO1
+  	  // like this the message has the chance to enter either FIFO and get received with an interrupt
+  	  // We need to increment the banks to be able to have all filters active at the same time and not overwrite them
 
-  	// FILTER FOR STEERING WHEEL
-
+  	// STEERING WHEEL RECEIVE
    CAN_FilterTypeDef FilterConfig0;
    FilterConfig0.FilterIdHigh = STEERING_RX_ID << 5 ;
    FilterConfig0.FilterIdLow = 0;
-   FilterConfig0.FilterMaskIdHigh = 0;
+   FilterConfig0.FilterMaskIdHigh = 0xffe0;
    FilterConfig0.FilterMaskIdLow = 0;
    FilterConfig0.FilterFIFOAssignment = CAN_FILTER_FIFO0;
    FilterConfig0.FilterBank = 0;
@@ -299,32 +299,73 @@ static void MX_CAN_Init(void)
    if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig0)!=HAL_OK) {
  	  Error_Handler();
  	}
-   if(HAL_CAN_Start(&hcan)!=HAL_OK) {
+
+   CAN_FilterTypeDef FilterConfig01;
+   FilterConfig01.FilterIdHigh = STEERING_RX_ID << 5 ;
+   FilterConfig01.FilterIdLow = 0;
+   FilterConfig01.FilterMaskIdHigh = 0xffe0;
+   FilterConfig01.FilterMaskIdLow = 0;
+   FilterConfig01.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+   FilterConfig01.FilterBank = 1;
+   FilterConfig01.SlaveStartFilterBank = 0;
+   FilterConfig01.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig01.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig01.FilterActivation = ENABLE;
+
+   if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig01)!=HAL_OK) {
  	  Error_Handler();
-   }
+ 	}
 
-
+ 	// ECU RECEIVE
    CAN_FilterTypeDef FilterConfig1;
-   FilterConfig0.FilterIdHigh = ECU_RX_ID << 5 ;
-   FilterConfig0.FilterIdLow = 0;
-   FilterConfig0.FilterMaskIdHigh = 0;
-   FilterConfig0.FilterMaskIdLow = 0;
-   FilterConfig0.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-   FilterConfig0.FilterBank = 1;
-   FilterConfig0.SlaveStartFilterBank = 0;
-   FilterConfig0.FilterMode = CAN_FILTERMODE_IDMASK;
-   FilterConfig0.FilterScale = CAN_FILTERSCALE_32BIT;
-   FilterConfig0.FilterActivation = ENABLE;
+   FilterConfig1.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig1.FilterIdLow = 0;
+   FilterConfig1.FilterMaskIdHigh = 0xffe0;
+   FilterConfig1.FilterMaskIdLow = 0;
+   FilterConfig1.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+   FilterConfig1.FilterBank = 2;
+   FilterConfig1.SlaveStartFilterBank = 0;
+   FilterConfig1.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig1.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig1.FilterActivation = ENABLE;
 
    if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig1)!=HAL_OK) {
  	  Error_Handler();
  	}
 
+   CAN_FilterTypeDef FilterConfig11;
+   FilterConfig11.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig11.FilterIdLow = 0;
+   FilterConfig11.FilterMaskIdHigh = 0xffe0;
+   FilterConfig11.FilterMaskIdLow = 0;
+   FilterConfig11.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+   FilterConfig11.FilterBank = 3;
+   FilterConfig11.SlaveStartFilterBank = 0;
+   FilterConfig11.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig11.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig11.FilterActivation = ENABLE;
 
-   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
- 	{
+   if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig11)!=HAL_OK) {
+ 	  Error_Handler();
+ 	}
+
+   // we activate the notifications (interrupts) for FIFO0
+   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
 	   Error_Handler();
  	}
+   // we activate the notifications (interrupts) for FIFO1
+   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK) {
+	   Error_Handler();
+ 	}
+   // we activate the notifications (interrupts) for all error codes
+   if(HAL_CAN_ActivateNotification(&hcan, (CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE | CAN_IT_ERROR)) != HAL_OK) {
+	   Error_Handler();
+   }
+   // we start the CAN
+   if(HAL_CAN_Start(&hcan)!=HAL_OK) {
+ 	  Error_Handler();
+   }
+
   /* USER CODE END CAN_Init 2 */
 
 }
@@ -569,6 +610,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		BCycleTimerFlag = 1;
 	}
 }
+
 
 /* USER CODE END 4 */
 

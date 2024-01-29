@@ -7,14 +7,15 @@
 
 #include "utils.h"
 
-// macro and pattern to print binary numbers
-#define BYTE_TO_BIN_PAT "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BIN(byte)		\
-	(byte & 0x80 ? '1' : '0'),	\
-	(byte & 0x40 ? '1' : '0'),	\
-	(byte & 0x20 ? '1' : '0'),	\
-	(byte & 0x10 ? '1' : '0'),	\
-	(byte & 0x08 ? '1' : '0'),	\
-	(byte & 0x04 ? '1' : '0'),	\
-	(byte & 0x02 ? '1' : '0'),	\
-	(byte & 0x01 ? '1' : '0')
+void print(char *msg, ...) {
+
+	char buff[100];
+	va_list args;
+	va_start(args, msg);
+	vsprintf(buff, msg, args);
+	va_end(args);
+
+#if USB_DEBUG
+	HAL_UART_Transmit(&huart3, (uint8_t *)buff, strlen(buff), 10);
+#endif
+}

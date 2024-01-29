@@ -17,8 +17,8 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
-#define ADC_BUFFER_SIZE 375*2	// is the size of the buffer, 2 halves of 306 samples
-
+#define ADC_BUFFER_SIZE 375*2						// is the size of the buffer, 2 halves of 306 samples
+#define ADC_BUFFER_HALF_SIZE ADC_BUFFER_SIZE/2		// we use it to do the division in compile time and not in run time
 
 extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
 
@@ -39,6 +39,7 @@ typedef struct {
 	int16_t nEngine;			// engine RPM taken from the ECU
 
 	uint8_t NCANErrors;			// CAN Receiving error count
+	float VSupply;				// PCB Voltage Input Diagnostic
 
 } InputStruct;
 
