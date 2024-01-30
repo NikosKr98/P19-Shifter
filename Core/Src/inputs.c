@@ -1,5 +1,5 @@
 /*
- * input.c
+ * inputs.c
  *
  *  Created on: Jan 22, 2024
  *      Author: NikosKr
@@ -8,10 +8,15 @@
 #include "inputs.h"
 
 
+// MACRO DEFINITIONS
+#define PushEvent(ins_, event_) ins_->nEventStatus |= (1 << (uint32_t)(event_))
+#define RaiseFault(ins_, fault_) ins_->nFaultStatus |= (1 << (uint32_t)(fault_))
+#define ClearFault(ins_, fault_) ins_->nFaultStatus &= ~(1 << (uint32_t)(fault_))
 
 
 // private variables
-uint16_t NGearMap[TOTAL_GEARS][2] = {
+
+uint16_t NGearMap[TOTAL_GEARS][2] = {	// TODO: needs to go in maps.h file
 
     {3600, 3750},  // Gear 0
     {3900, 4000},  // Gear 1
@@ -22,9 +27,12 @@ uint16_t NGearMap[TOTAL_GEARS][2] = {
 
 };
 
+// I/O Flags
+uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0;
+
 // CAN
 uint8_t BUpShiftRequestCAN;
-uint8_t BDownShiftRequestCAN;
+uint8_t BDnShiftRequestCAN;
 uint8_t BLaunchRequestCAN;
 int8_t rClutchPaddleCAN;
 uint16_t nEngineCAN;
@@ -37,32 +45,106 @@ uint16_t NGearRawFiltered;
 volatile uint8_t NAdcBufferSide; // flag to determine the first or second half of the adc buffer for averaging
 
 // private functions declaration
-uint8_t calculateActualNGear(uint16_t NGearRaw);
+uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw);
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side);
 
-void ReadInputs(InputStruct *input){
+void ReadInputs(InputStruct *inputs){
 
-	// NGear Conditioning
+	// Reset events
+	    inputs->nEventStatus = 0;
+
+
+	// ---------------------------------------------------------------------------------------------------
+		// NGear Conditioning
 
 		// averaging
 		NGearRawFiltered = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide);
 
 		// mapping
-		input->NGear = calculateActualNGear(NGearRawFiltered);
 
-	// PCB Supply Voltage Conditioning
-//	input->VSupply = (float)ADC_VALUE * 3.3 / 4095 * (Voltage divider gain)
-	// TODO: set the analog input and decide filtering (or not)
+		// TODO: the NGear cannot be in error because we use it for the control later on
+				// possible solution is to create a continuous map i.e. 2.3~2nd and put it in error when we are in the middle of 2 gears
+				// doing the average (in this case a round function) to determine the NGear from the raw value
+				// the error will be if we exceed the up and down limits -> pot broken. in this case we need strategy to come back and use fully open loop control
+				//currently if there is not a patch in the table we will be left with the last value which is not correct
 
-	// transfer CAN data into myInputs struct
-	input->BUpShiftRequest = BUpShiftRequestCAN;
-	input->BDownShiftRequest = BDownShiftRequestCAN;
-	input->BLaunchRequest = BLaunchRequestCAN;
-	input->rClutchPaddle = rClutchPaddleCAN;
-	input->nEngine = nEngineCAN;
 
-	input->NCANErrors = NCANErrorCount;			// update can error count
-	input->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
+		inputs->BNGearInError = calculateActualNGear(inputs->NGear, NGearRawFiltered);
+
+		if(inputs->BNGearInError) {
+			RaiseFault(inputs, NGEAR_IN_ERROR_FAULT);
+		}
+		else {
+			ClearFault(inputs, NGEAR_IN_ERROR_FAULT);
+		}
+	// ---------------------------------------------------------------------------------------------------
+		// Clutch Paddle Conditioning
+
+		inputs->rClutchPaddleRaw = rClutchPaddleCAN;
+		inputs->rClutchPaddle = CLAMP(inputs->rClutchPaddleRaw, CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
+		// TODO: make a strategy for error detection (in rClutchPaddleRaw, or in possible extra  error variable)
+
+	// ---------------------------------------------------------------------------------------------------
+		// PCB Supply Voltage Conditioning
+
+		//	inputs->VSupply = (float)ADC_VALUE * 3.3 / 4095 * (Voltage divider gain)
+		// TODO: set the analog inputs and decide filtering (or not)
+
+	// ---------------------------------------------------------------------------------------------------
+		// Copy CAN data to struct
+
+		inputs->BUpShiftRequest = BUpShiftRequestCAN;
+		inputs->BDnShiftRequest = BDnShiftRequestCAN;
+		inputs->BLaunchRequest = BLaunchRequestCAN;
+
+		inputs->nEngine = nEngineCAN;
+
+		inputs->NCANErrors = NCANErrorCount;			// update can error count
+		inputs->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
+
+	// ---------------------------------------------------------------------------------------------------
+		// Events Parsing
+
+		if(inputs->BUpShiftRequest && !BUpShiftRequested) {
+			BUpShiftRequested = 1;
+			PushEvent(inputs, UPSHIFT_PRESS_EVT);
+		}
+		else if(!inputs->BUpShiftRequest && BUpShiftRequested) {
+			BUpShiftRequested = 0;
+		}
+
+		if(inputs->BDnShiftRequest && !BDnShiftRequested) {
+			BDnShiftRequested = 1;
+			PushEvent(inputs, DNSHIFT_PRESS_EVT);
+		}
+		else if(!inputs->BDnShiftRequest && BDnShiftRequested) {
+			BDnShiftRequested = 0;
+		}
+
+		if(inputs->BLaunchRequest && !BLaunchRequested) {
+			BLaunchRequested = 1;
+			PushEvent(inputs, LAUNCH_PRESS_EVT);
+		}
+		else if(!inputs->BLaunchRequest && BLaunchRequested) {
+			BLaunchRequested = 0;
+		}
+
+		if(inputs->rClutchPaddle > CLUTCH_PADDLE_PRESSED_THRESHOLD) {
+			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
+		}
+
+		if(inputs->BUpShiftRequest && inputs->BDnShiftRequest) {
+			RaiseFault(inputs, BOTH_PADS_PRESSED_FAULT);
+		}
+		else {
+			ClearFault(inputs, BOTH_PADS_PRESSED_FAULT);
+		}
+
+	// ---------------------------------------------------------------------------------------------------
+
+
+
+
 
 }
 
@@ -70,6 +152,10 @@ void InitInputs(void){
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
 }
 
+uint8_t CheckFaults(InputStruct *inputs) {
+	if(inputs->nFaultStatus) return 1;
+	return 0;
+}
 
 void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
@@ -87,7 +173,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 case STEERING_RX_ID :
 
 		BUpShiftRequestCAN = RxBuffer[0];
-		BDownShiftRequestCAN = RxBuffer[1];
+		BDnShiftRequestCAN = RxBuffer[1];
 		BLaunchRequestCAN = RxBuffer[2];
 		rClutchPaddleCAN = RxBuffer[3];
 
@@ -105,14 +191,15 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 }
 
 
-uint8_t calculateActualNGear(uint16_t NGearRaw) {
+uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw) {
 
     for (uint8_t gear = 0; gear < TOTAL_GEARS; ++gear) {
         if (NGearRaw >= NGearMap[gear][0] && NGearRaw <= NGearMap[gear][1]) {
-            return gear;
+        	NGear = gear;
+        	return 0;
         }
     }
-    return 255; // If no match found, return 255!
+    return 1; // If no match found, return error!
 }
 
 

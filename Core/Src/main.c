@@ -60,8 +60,8 @@ uint16_t adcRawValue[ADC_BUFFER_SIZE];
 volatile uint8_t BCycleTimerFlag = 0;
 
 // public struct variables
-InputStruct myInput;
-OutputStruct myOutput;
+InputStruct Inputs;
+OutputStruct Outputs;
 
 /* USER CODE END PV */
 
@@ -128,7 +128,7 @@ int main(void)
 
 
   InitInputs();
-  InitApplication();
+  InitApplication(&Inputs,&Outputs);
   InitOutputs();
 
   /* USER CODE END 2 */
@@ -140,9 +140,9 @@ int main(void)
 	  if(BCycleTimerFlag) {		// BCycleTimerFlag becomes 1 in the Timer callback below
 		  BCycleTimerFlag = 0;
 
-		  ReadInputs(&myInput);
-		  RunApplication(&myInput,&myOutput);
-		  WriteOutputs(&myOutput);
+		  ReadInputs(&Inputs);
+		  RunApplication(&Inputs,&Outputs);
+		  WriteOutputs(&Outputs);
 	  }
 
     /* USER CODE END WHILE */
