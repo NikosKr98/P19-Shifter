@@ -8,15 +8,18 @@
 #ifndef INC_INPUTS_H_
 #define INC_INPUTS_H_
 
-#include "utils.h"
+#include <Utils.h>
+//#include "maps.h"
 
 // CAN
 #define STEERING_RX_ID 0x310
 #define ECU_RX_ID 0x311
 
+#define STEERING_WHEEL_FITTED_INTERVAL	500			// after this time that we have not seen the message from SW we declare it not fitted/dead
+#define ECU_COMMS_LOST_INTERVAL			500			// after this time that we have not seen the message from the ECU we declare it not fitted/dead
+
 // GEAR
-#define TOTAL_GEARS 6
-#define MAX_GEAR 5
+
 
 
 // CLUTCH
@@ -37,10 +40,15 @@ extern CAN_HandleTypeDef hcan;
 /* EVENT DEFINITION */
 typedef enum _Event {
 	UPSHIFT_PRESS_EVT,
+	UPSHIFT_LONG_PRESS_EVT,
+	UPSHIFT_RELEASE_EVT,
 	DNSHIFT_PRESS_EVT,
+	DNSHIFT_LONG_PRESS_EVT,
+	DNSHIFT_RELEASE_EVT,
 	LAUNCH_PRESS_EVT,
 	CLUTCH_PADDLE_PRESS_EVT
 } Event;
+
 
 /* FAULT DEFINITION */
 typedef enum _Fault {
@@ -54,23 +62,40 @@ typedef enum _Fault {
 	CLUTCHPADDLE_ANALOG_FAULT,
 } Fault;
 
+
 typedef struct _InputStruct {
-	uint32_t nEventStatus; 		// 32-bit bitfield for events
-	uint32_t nFaultStatus; 		// 32-bit bitfield for faults
+	uint32_t nEventStatus; 			// 32-bit bitfield for events
+	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
 
-	uint8_t NGear;				// actual gear based on filtered gear potentiometer
-	uint8_t BNGearInError;		// error flag for NGear
-	uint8_t BUpShiftRequest;	// steering wheel UpShift request (reflects the state of the paddle)
-	uint8_t BDnShiftRequest;	// steering wheel DownShift request (reflects the state of the paddle)
-	uint8_t BLaunchRequest;		// steering wheel Launch control  request (reflects the state of the button)
-	int8_t rClutchPaddleRaw;	// Steering wheel clutch paddle percentage (can be from -4% to 104% to allow margin)
-	int8_t rClutchPaddle;		// Steering wheel clutch paddle Clipped percentage
-	int16_t nEngine;			// engine RPM taken from the ECU
+	// GEAR
+	uint8_t BNGearInError;			// error flag for NGear
+	float VNGearRaw;				// the voltage of the gear potentiometer
+	float NGearRaw;					// raw gear value interpolated from the NGear 2D map
+	uint8_t NGear;					// actual gear based on filtered gear potentiometer voltage and conditioned value
 
-	uint8_t NCANErrors;			// CAN Bus error count
-	uint8_t NCANRxErrors;		// CAN message receive error count
+	// Shifts & Buttons
+	uint8_t BUpShiftRequest;		// steering wheel UpShift request (reflects the state of the paddle)
+	uint8_t BDnShiftRequest;		// steering wheel DownShift request (reflects the state of the paddle)
+	uint8_t NUpshiftRequestSource;	// can be CAN or Analog
+	uint8_t NDnshiftRequestSource;	// can be CAN or Analog
+	uint8_t BLaunchRequest;			// steering wheel Launch control  request (reflects the state of the button)
 
-	float VSupply;				// PCB Voltage Input Diagnostic
+	// Clutch Paddles
+	int8_t rClutchPaddleRaw;		// Steering wheel clutch paddle percentage (can be from -4% to 104% to allow margin)
+	int8_t rClutchPaddle;			// Steering wheel clutch paddle Clipped percentage
+	uint8_t NClutchPaddleSource;	// can be CAN or Analog
+
+	// ECU
+	int16_t nEngine;				// engine RPM taken from the ECU
+	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable
+
+
+	// CAN
+	uint8_t BSteeringWheelFitted;	// 1 if the SW is fitted and the SIU is communicating, otherwise 0
+	uint8_t NCANErrors;				// CAN Bus error count
+	uint8_t NCANRxErrors;			// CAN message receive error count
+
+	float VSupply;					// PCB Voltage Input Diagnostic
 
 } InputStruct;
 

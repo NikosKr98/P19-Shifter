@@ -8,8 +8,13 @@
 #ifndef INC_MAPS_H_
 #define INC_MAPS_H_
 
-#include "utils.h"
+#include <Utils.h>
 
+#define TOTAL_GEARS 6
+#define MAX_GEAR 5
+
+#define VNGEAR_MARGIN_MIN 0.2f		// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VNGEAR_MARGIN_MAX 0.2f		// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 
 //uint16_t NGearMap[TOTAL_GEARS][2] = {	// TODO: needs to go in maps.h file
 //
@@ -22,7 +27,17 @@
 //
 //};
 
-uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 0,	// neutral to 1st gear min threshold
+static const float NGearMap[2][TOTAL_GEARS] = {
+
+	/* NGear  */	{0,    1,   2,   3,   4,   5},
+	/* VNGear */	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
+};
+
+
+
+
+
+static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 0,	// neutral to 1st gear min threshold
 											0,	// 1st to 2nd
 											0,	// 2nd to 3rd
 											0,	// 3rd to 4th
@@ -30,7 +45,7 @@ uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 0,	// neutral to 1st gear min thresh
 };
 
 
-uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {	10000,	// 1st to neutral gear max threshold
+static const uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {		10000,	// 1st to neutral gear max threshold
 												10000,	// 2nd to 1st
 												10000,	// 3rd to 2nd
 												10000,	// 4th to 3rd

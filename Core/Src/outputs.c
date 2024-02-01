@@ -5,7 +5,7 @@
  *      Author: NikosKr
  */
 
-#include "outputs.h"
+#include <Outputs.h>
 
 //  private variables
 uint32_t msg_interval, msg_previous, button_previous, button_interval, msg_interval,shift_end_time;
@@ -35,7 +35,7 @@ void WriteOutputs(OutputStruct *output) {
 			output->target_gear--;
 		}
 
-		if(output->target_gear > TOTAL_GEARS){
+		if(output->target_gear > 6){ // TODO: to be fixed
 			output->target_gear=5;
 		}
 		else if(output->target_gear > 1 && output->target_gear <= 5){

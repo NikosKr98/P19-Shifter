@@ -1,7 +1,7 @@
-../Core/Src/outputs.c:22:6:InitOutputs	4	static
-../Core/Src/outputs.c:26:6:WriteOutputs	16	static
-../Core/Src/outputs.c:83:6:CAN_Tx	56	static
-../Core/Src/outputs.c:102:6:shiftup_activation	16	static
-../Core/Src/outputs.c:110:6:shiftdown_activation	16	static
-../Core/Src/outputs.c:118:6:neutral_activation	16	static
-../Core/Src/outputs.c:128:6:end_of_shift	16	static
+../Core/Src/Outputs.c:22:6:InitOutputs	4	static
+../Core/Src/Outputs.c:26:6:WriteOutputs	16	static
+../Core/Src/Outputs.c:83:6:CAN_Tx	56	static
+../Core/Src/Outputs.c:102:6:shiftup_activation	16	static
+../Core/Src/Outputs.c:110:6:shiftdown_activation	16	static
+../Core/Src/Outputs.c:118:6:neutral_activation	16	static
+../Core/Src/Outputs.c:128:6:end_of_shift	16	static

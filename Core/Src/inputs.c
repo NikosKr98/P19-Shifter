@@ -5,27 +5,16 @@
  *      Author: NikosKr
  */
 
-#include "inputs.h"
-
+#include <Inputs.h>
+#include <Maps.h>
 
 // MACRO DEFINITIONS
 #define PushEvent(ins_, event_) ins_->nEventStatus |= (1 << (uint32_t)(event_))
 #define RaiseFault(ins_, fault_) ins_->nFaultStatus |= (1 << (uint32_t)(fault_))
 #define ClearFault(ins_, fault_) ins_->nFaultStatus &= ~(1 << (uint32_t)(fault_))
 
-
-// private variables
-
-uint16_t NGearMap[TOTAL_GEARS][2] = {	// TODO: needs to go in maps.h file
-
-    {3600, 3750},  // Gear 0
-    {3900, 4000},  // Gear 1
-    {3200, 3300},  // Gear 2
-    {2250, 2400},  // Gear 3
-    {1300, 1500},  // Gear 4
-    {400, 600}     // Gear 5
-
-};
+// Timing variables
+uint32_t tCurrent;
 
 // I/O Flags
 uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0;
@@ -36,58 +25,62 @@ uint8_t BDnShiftRequestCAN;
 uint8_t BLaunchRequestCAN;
 int8_t rClutchPaddleCAN;
 uint16_t nEngineCAN;
+uint32_t tCANSteeringWheelLastSeen;
+uint32_t tCANECULastSeen;
 
 volatile uint8_t NCANErrorCount;
 volatile uint16_t NCanGetRxErrorCount=0;
 
 // ADC
-uint16_t NGearRawFiltered;
+uint16_t NGearRawADCFiltered;
 volatile uint8_t NAdcBufferSide; // flag to determine the first or second half of the adc buffer for averaging
 
 // private functions declaration
 uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw);
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side);
+uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float *output, float minMargin, float maxMargin);
 
 void ReadInputs(InputStruct *inputs){
 
 	// Reset events
 	    inputs->nEventStatus = 0;
 
+	    tCurrent = HAL_GetTick();
 
 	// ---------------------------------------------------------------------------------------------------
 		// NGear Conditioning
 
-		// averaging
-		NGearRawFiltered = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide);
+		// ADC averaging
+		NGearRawADCFiltered = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide);
+
+		// voltage conversion
+		inputs->VNGearRaw = (float)(NGearRawADCFiltered * 3.3 / 4095.0);
 
 		// mapping
+		inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGearRaw, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
 
-		// TODO: the NGear cannot be in error because we use it for the control later on
-				// possible solution is to create a continuous map i.e. 2.3~2nd and put it in error when we are in the middle of 2 gears
-				// doing the average (in this case a round function) to determine the NGear from the raw value
-				// the error will be if we exceed the up and down limits -> pot broken. in this case we need strategy to come back and use fully open loop control
-				//currently if there is not a patch in the table we will be left with the last value which is not correct
+		// conditioning (round float to nearest int)
+		inputs->NGear = (uint8_t)round(inputs->NGearRaw);
 
-
-		inputs->BNGearInError = calculateActualNGear(inputs->NGear, NGearRawFiltered);
-
+		// check for errors
 		if(inputs->BNGearInError) {
 			RaiseFault(inputs, NGEAR_IN_ERROR_FAULT);
 		}
 		else {
 			ClearFault(inputs, NGEAR_IN_ERROR_FAULT);
 		}
+
 	// ---------------------------------------------------------------------------------------------------
 		// Clutch Paddle Conditioning
-
+		// TODO: make a strategy for error detection (in rClutchPaddleRaw, or in possible extra  error variable)
+		// use BSteeringWheelFitted
 		inputs->rClutchPaddleRaw = rClutchPaddleCAN;
 		inputs->rClutchPaddle = CLAMP(inputs->rClutchPaddleRaw, CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
-		// TODO: make a strategy for error detection (in rClutchPaddleRaw, or in possible extra  error variable)
 
 	// ---------------------------------------------------------------------------------------------------
 		// PCB Supply Voltage Conditioning
 
-		//	inputs->VSupply = (float)ADC_VALUE * 3.3 / 4095 * (Voltage divider gain)
+		//	inputs->VSupply = (float)ADC_VALUE * 3.3 / 4095.0 * (Voltage divider gain <- TBD as 3define)
 		// TODO: set the analog inputs and decide filtering (or not)
 
 	// ---------------------------------------------------------------------------------------------------
@@ -105,6 +98,8 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 		// Events Parsing
 
+		// TODO: check for Up/DnShift in Error and select based on NUp/DnshiftRequestSource.
+		// remember that primary source is CAN and in case it is in Error (or SE not fitted) we pass to Analog
 		if(inputs->BUpShiftRequest && !BUpShiftRequested) {
 			BUpShiftRequested = 1;
 			PushEvent(inputs, UPSHIFT_PRESS_EVT);
@@ -141,10 +136,14 @@ void ReadInputs(InputStruct *inputs){
 		}
 
 	// ---------------------------------------------------------------------------------------------------
+		// Steering Wheel Fitted Check
 
 
 
 
+
+	// ---------------------------------------------------------------------------------------------------
+		// nEngine
 
 }
 
@@ -171,18 +170,16 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	switch(RxHeader.StdId) {
 
 	 case STEERING_RX_ID :
-
-		BUpShiftRequestCAN = RxBuffer[0];
-		BDnShiftRequestCAN = RxBuffer[1];
-		BLaunchRequestCAN = RxBuffer[2];
-		rClutchPaddleCAN = RxBuffer[3];
-
-		break;
+		 tCANSteeringWheelLastSeen = HAL_GetTick();
+		 BUpShiftRequestCAN = RxBuffer[0];
+		 BDnShiftRequestCAN = RxBuffer[1];
+		 BLaunchRequestCAN = RxBuffer[2];
+		 rClutchPaddleCAN = RxBuffer[3];
+		 break;
 
 	 case ECU_RX_ID:
-
+		 tCANECULastSeen = HAL_GetTick();
 		 nEngineCAN = RxBuffer[0] << 8 | RxBuffer[1];
-
 		 break;
 
 	 default:
@@ -202,6 +199,36 @@ uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw) {
     return 1; // If no match found, return error!
 }
 
+uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float *output, float minMargin, float maxMargin) {
+	float dx, dy;
+	int i;
+
+	if(input < map[0][0] - minMargin) {
+		// if input is less than the smaller element of the map minus a small margin,
+		// we declare the input in error and assign the min value of the map
+		*output = map[1][0];
+		return 1;
+	}
+	if(input > map[0][size-1] + maxMargin) {
+		// if input is greater than the largest element of the map plus a small margin,
+		// we declare the input in error and assign the max value of the map
+		*output = map[1][size-1];
+		return 1;
+	}
+
+	// we find i so that map[0][i] < input < map[0][i+1]
+	for(i=0; i<size; i++) {
+		if(map[0][i+1] > input)
+			break;
+	}
+
+	// we interpolate
+	dx = map[0][i+1] - map[0][i];
+	dy = map[1][i+1] - map[1][i];
+
+	*output = (float)(map[1][i] + (input - map[0][i]) * dy/dx);
+	return 0;
+}
 
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side) {
 

@@ -5,8 +5,8 @@
  *      Author: NikosKr
  */
 
-#include "app.h"
-#include "maps.h"
+#include <Controller.h>
+#include <Maps.h>
 
 // Local Structs
 InputStruct *MyInputs; // TODO: they need to go in app.h
@@ -16,11 +16,10 @@ States NCurrentState, NPreviousState;
 
 //Shifts NShiftRequest;
 
-// Control variables
-uint8_t NGearTarget=0;
-uint16_t xClutchTarget=0;
 
-uint32_t tPreShiftThreshold=0;
+
+
+uint32_t tPreShiftTimer=0;
 
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
@@ -44,6 +43,15 @@ void RunApplication(InputStruct *inputs, OutputStruct *outputs){
 
 //	myInputs = inputs;   // TODO: previously here... we should not need to do the copy every time, they are pointers
 //	myOutputs = outputs;
+
+
+	// ANTISTALL
+
+
+	// CLUTCH CONTROLLER
+
+
+
 
 
 	// SHIFTER STATE MACHINE
@@ -126,7 +134,7 @@ void PRE_UPSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_UPSHIFT_STATE;
 
-	tPreShiftThreshold = HAL_GetTick();
+	tPreShiftTimer = HAL_GetTick();
 }
 void PRE_UPSHIFT_Exit(void) {
 
@@ -135,15 +143,19 @@ void PRE_UPSHIFT_Event(void) {
 
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
-		NGearTarget = MyInputs->NGear + 1;		// we go to the next gear
-		xClutchTarget = 0;						// we do not need any clutch opening
+		MyOutputs->NGearTarget = MyInputs->NGear + 1;			// we go to the next gear
+		MyOutputs->xClutchTargetShift = 0;						// we do not need any clutch opening
+
+		if(ALLOW_SPARK_CUT_ON_UP_SHIFT)
+			MyOutputs->BSparkCut = 1;
+
 		PRE_UPSHIFT_Exit();
 		SHIFTING_Entry();
 		return;
 	}
 
 	// we check for control errors and if present after the time threshold, we abort
-	if(MyOutputs->NControlErrorStatus && (tPreShiftThreshold + PRE_UPSHIFT_THRESHOLD_TIME) <= HAL_GetTick()) {
+	if(MyOutputs->NControlErrorStatus && (tPreShiftTimer + PRE_UPSHIFT_THRESHOLD_TIME) <= HAL_GetTick()) {
 		PRE_UPSHIFT_Exit();
 		ERROR_Entry();
 		return;
@@ -153,17 +165,17 @@ void PRE_UPSHIFT_Event(void) {
 }
 void PRE_UPSHIFT_Run(void) {
 
-	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)
+	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)	// trying to put 1st gear without clutch
 		RaiseControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH);
 	else
 		ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH);
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear])
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear])		// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	else
 		ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 
-	if(MyInputs->NGear + 1 > TOTAL_GEARS)
+	if(MyInputs->NGear + 1 > TOTAL_GEARS)		// trying to shift up after last gear
 		RaiseControlError(TARGET_GEAR_EXCEEDS_MAX);
 	else
 		ClearControlError(TARGET_GEAR_EXCEEDS_MAX);
@@ -174,6 +186,8 @@ void PRE_UPSHIFT_Run(void) {
 void PRE_DNSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_DNSHIFT_STATE;
+
+	tPreShiftTimer = HAL_GetTick();
 }
 void PRE_DNSHIFT_Exit(void) {
 
@@ -206,6 +220,11 @@ void SHIFTING_Run(void) {
 void POSTSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = POSTSHIFT_STATE;
+
+	// reset all control variables for the next actuation
+	MyOutputs->xClutchTargetShift = 0;
+	MyOutputs->BSparkCut = 0;
+
 }
 void POSTSHIFT_Exit(void) {
 
@@ -226,6 +245,11 @@ void ERROR_Exit(void) {
 
 }
 void ERROR_Event(void) {
+
+	// check that all faults are cleared
+		// for some faults that are very critical we could make a counter and when it expires we declare a default hardcoded value to be able to move on
+
+	// check that all control errors are cleared
 
 }
 void ERROR_Run(void) {

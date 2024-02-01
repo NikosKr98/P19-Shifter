@@ -8,11 +8,11 @@
 #ifndef INC_OUTPUTS_H_
 #define INC_OUTPUTS_H_
 
-#include "utils.h"
-#include "inputs.h"
-#include "app.h"
+#include <Controller.h>
+#include <Utils.h>
 
 extern TIM_HandleTypeDef htim2;
+extern CAN_HandleTypeDef hcan;
 
 #define shifting_interval 500
 #define neutral_interval 10

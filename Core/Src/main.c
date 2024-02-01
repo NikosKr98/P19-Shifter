@@ -17,13 +17,13 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <Controller.h>
+#include <Inputs.h>
+#include <Outputs.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "inputs.h"
-#include "app.h"
-#include "outputs.h"
 
 /* USER CODE END Includes */
 
