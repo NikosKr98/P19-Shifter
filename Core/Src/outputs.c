@@ -35,7 +35,7 @@ void WriteOutputs(OutputStruct *output) {
 			output->target_gear--;
 		}
 
-		if(output->target_gear > 6){ // TODO: to be fixed
+		if(output->target_gear > 5){ // TODO: to be fixed
 			output->target_gear=5;
 		}
 		else if(output->target_gear > 1 && output->target_gear <= 5){

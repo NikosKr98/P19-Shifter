@@ -9,26 +9,25 @@
 #define INC_INPUTS_H_
 
 #include <Utils.h>
-//#include "maps.h"
 
 // CAN
 #define STEERING_RX_ID 0x310
 #define ECU_RX_ID 0x311
 
-#define STEERING_WHEEL_FITTED_INTERVAL	500			// after this time that we have not seen the message from SW we declare it not fitted/dead
-#define ECU_COMMS_LOST_INTERVAL			500			// after this time that we have not seen the message from the ECU we declare it not fitted/dead
+#define STEERING_WHEEL_FITTED_INTERVAL		500		// after this time that we have not seen the message from SW we declare it not fitted/dead
+#define ECU_COMMS_LOST_INTERVAL				500		// after this time that we have not seen the message from the ECU we declare it not fitted/dead
 
 // GEAR
-
+#define VNGEAR_MARGIN_MIN 					0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VNGEAR_MARGIN_MAX 					0.2f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 
 
 // CLUTCH
-#define CLUTCH_PADDLE_PRESSED_THRESHOLD 	10		// TODO: to be tuned
+#define CLUTCH_PADDLE_PRESSED_THRESHOLD 	80		// Threshold % to consider Clutch Paddle as pressed
 #define CLUTCH_PADDLE_MIN					0		// min clutch paddle percentage
 #define CLUTCH_PADDLE_MAX 					100		// max clutch paddle percentage
-#define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	60		// threshold for upshift from neutral to first
 
-#define ADC_BUFFER_SIZE 375*2						// is the size of the buffer, 2 halves of 306 samples
+#define ADC_BUFFER_SIZE 357*2						// is the size of the buffer, 2 halves of 306 samples
 #define ADC_BUFFER_HALF_SIZE ADC_BUFFER_SIZE/2		// we use it to do the division in compile time and not in run time
 
 extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
@@ -40,55 +39,80 @@ extern CAN_HandleTypeDef hcan;
 /* EVENT DEFINITION */
 typedef enum _Event {
 	UPSHIFT_PRESS_EVT,
-	UPSHIFT_LONG_PRESS_EVT,
 	UPSHIFT_RELEASE_EVT,
 	DNSHIFT_PRESS_EVT,
-	DNSHIFT_LONG_PRESS_EVT,
 	DNSHIFT_RELEASE_EVT,
 	LAUNCH_PRESS_EVT,
-	CLUTCH_PADDLE_PRESS_EVT
+	LAUNCH_RELEASE_EVT,
+	CLUTCH_PADDLE_PRESS_EVT,
+	CLUTCH_PADDLE_RELEASE_EVT
 } Event;
 
 
 /* FAULT DEFINITION */
 typedef enum _Fault {
-	NGEAR_IN_ERROR_FAULT,
-	BOTH_PADS_PRESSED_FAULT,
-	UPSHIFT_CAN_FAULT,
-	DNSHIFT_CAN_FAULT,
-	UPSHIFT_ANALOG_FAULT,
-	DNSHIFT_ANALOG_FAULT,
-	CLUTCHPADDLE_CAN_FAULT,
-	CLUTCHPADDLE_ANALOG_FAULT,
+	NGEAR_FAULT,
+	STEERING_WHEEL_FAULT,
+	UPSHIFT_REQUEST_FAULT,
+	DNSHIFT_REQUEST_FAULT,
+	LAUNCH_REQUEST_FAULT,
+	CLUTCHPADDLE_FAULT,
+	ECU_COMMS_FAULT
 } Fault;
 
+/* SIGNAL SOURCE  */
+typedef enum _SigSource {
+	CAN,
+	Analog
+} SignalSource;
 
 typedef struct _InputStruct {
 	uint32_t nEventStatus; 			// 32-bit bitfield for events
 	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
 
+
 	// GEAR
-	uint8_t BNGearInError;			// error flag for NGear
-	float VNGearRaw;				// the voltage of the gear potentiometer
-	float NGearRaw;					// raw gear value interpolated from the NGear 2D map
-	uint8_t NGear;					// actual gear based on filtered gear potentiometer voltage and conditioned value
+	uint8_t BNGearInError;					// error flag for NGear
+	float VNGearRaw;						// the voltage of the gear potentiometer
+	float NGearRaw;							// raw gear value interpolated from the NGear 2D map
+	uint8_t NGear;							// actual gear based on filtered gear potentiometer voltage and conditioned value
 
 	// Shifts & Buttons
-	uint8_t BUpShiftRequest;		// steering wheel UpShift request (reflects the state of the paddle)
-	uint8_t BDnShiftRequest;		// steering wheel DownShift request (reflects the state of the paddle)
-	uint8_t NUpshiftRequestSource;	// can be CAN or Analog
-	uint8_t NDnshiftRequestSource;	// can be CAN or Analog
-	uint8_t BLaunchRequest;			// steering wheel Launch control  request (reflects the state of the button)
+	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
+
+	uint8_t BUpShiftButtonCANInError;		// 1 if steering wheel CAN UpShift button is in Error
+	uint8_t BUpShiftButtonCAN;				// steering wheel CAN UpShift button (reflects the state of the paddle)
+	uint8_t BDnShiftButtonCANInError;		// 1 if steering wheel CAN DnShift button is in Error
+	uint8_t BDnShiftButtonCAN;				// steering wheel CAN DnShift button (reflects the state of the paddle)
+
+	uint8_t BUpDnShiftButtonAnalogInError;	// 1 if the internal Analog measurement of UpDnShift button is in error
+	uint8_t NBUpDnShiftButtonAnalog;			// 0:none 1:Up 2:Dn Internal Analog measurement of UpShift button (reflects the state of the paddle)
+
+	uint8_t BUpShiftRequestInError;			// 1 if UpShift request is in error
+	uint8_t BUpShiftRequest;				// UpShift request (reflects the state of the paddle)
+	uint8_t BDnShiftRequestInError;				// 1 if DnShift request is in error
+	uint8_t BDnShiftRequest;				// DnShift request (reflects the state of the paddle)
+	uint8_t NBUpshiftRequestSource;			// can be CAN or Analog
+	uint8_t NBDnshiftRequestSource;			// can be CAN or Analog
+
+	uint8_t BLaunchButtonCANInError;		// 1 if steering wheel CAN Launch control Button is in error
+	uint8_t BLaunchButtonCAN;				// steering wheel CAN Launch control Button (reflects the state of the button)
+	uint8_t BLaunchRequestInError;			// 1 if steering wheel CAN Launch control Button is in error
+	uint8_t BLaunchRequest;					// Launch control Button (reflects the state of the button)
 
 	// Clutch Paddles
-	int8_t rClutchPaddleRaw;		// Steering wheel clutch paddle percentage (can be from -4% to 104% to allow margin)
-	int8_t rClutchPaddle;			// Steering wheel clutch paddle Clipped percentage
-	uint8_t NClutchPaddleSource;	// can be CAN or Analog
+	uint8_t BrClutchPaddleRawCANInError;	// 1 if CAN clutch paddle value is in error
+	int8_t rClutchPaddleRawCAN;				// Steering wheel CAN clutch paddle percentage (can be from -x% to 10x% to allow margin)
+	uint8_t BrClutchPaddleRawAnalogInError;	// 1 if internal Clutch Analog Measurement in Error
+	int8_t rClutchPaddleRawAnalog;			// Internal Clutch Paddle Analog Measurement (can be from -x% to 10x% to allow margin)
+	uint8_t BrClutchPaddleInError;			// 1 if Clutch Paddle is in error (both Analog and CAN)
+	int8_t rClutchPaddle;					// Steering wheel clutch paddle Clipped percentage
+	uint8_t NrClutchPaddleSource;			// can be CAN or Analog
 
 	// ECU
-	int16_t nEngine;				// engine RPM taken from the ECU
 	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable
-
+	uint8_t BnEngineReliable;		// 1 if the ECU message arrives correctly and the measurement is reliable
+	int16_t nEngine;				// engine RPM taken from the ECU
 
 	// CAN
 	uint8_t BSteeringWheelFitted;	// 1 if the SW is fitted and the SIU is communicating, otherwise 0

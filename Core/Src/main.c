@@ -128,7 +128,7 @@ int main(void)
 
 
   InitInputs();
-  InitApplication(&Inputs,&Outputs);
+  InitController(&Inputs,&Outputs);
   InitOutputs();
 
   /* USER CODE END 2 */
@@ -141,7 +141,7 @@ int main(void)
 		  BCycleTimerFlag = 0;
 
 		  ReadInputs(&Inputs);
-		  RunApplication(&Inputs,&Outputs);
+		  Controller(&Inputs,&Outputs);
 		  WriteOutputs(&Outputs);
 	  }
 
