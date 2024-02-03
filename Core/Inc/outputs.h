@@ -16,7 +16,10 @@ extern CAN_HandleTypeDef hcan;
 
 #define shifting_interval 500
 #define neutral_interval 10
-#define STEERING_ID 0x320
+
+#define DISPLAY_TX_ID 0x320
+
+#define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
 
 
 

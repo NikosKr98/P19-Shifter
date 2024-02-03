@@ -49,9 +49,14 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// make the check that we are not actually pressing the clutch...if yes disable the strat
 	// make check if rpm =0 to not be active all the time if the car is stuck with gear inside and 0 rpm
 	// only if BDriverKill is active (shutdown is closed (armed)). Think about other scenarios
+	// if rClutchPaddle is in error accept going out from Antistall also with shift down with Clutch actuatuation. Think about
+	// the CLUTCH_ACTUATION_DURING_UP?DNSHIFT. -> create override variable
+	// BOverrideActuateClutchOnUpShift = 1 or/and BOverrideActuateClutchOnDnShift = 1
 
 	// CLUTCH CONTROLLER
 		// TODO: attention to xClutch , (always??? take the max of Manualtarget and ControlTarget)
+		// define the map rClutchPaddle to xClutchTargetManual
+		// do the check for rClutchPaddle in error (and if 1 do not actuate clutch -> keep the xClutchTargetManual to 0 and only generate Protection/Shift targets)
 
 
 
@@ -150,8 +155,15 @@ void PRE_UPSHIFT_Event(void) {
 
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
-		MyOutputs->NGearTarget = MyInputs->NGear + 1;			// we go to the next gear
-		MyOutputs->xClutchTargetShift = 0;						// we do not need any clutch opening
+		MyOutputs->NGearTarget = MyInputs->NGear + 1;											// we go to the next gear
+
+		if(CLUTCH_ACTUATION_DURING_UPSHIFT || MyOutputs->BOverrideActuateClutchOnUpShift) {		// we check for clutch strategy during shift
+			MyOutputs->xClutchTargetShift = xClutchTargetUpShiftMap[MyInputs->NGear];
+			MyOutputs->BOverrideActuateClutchOnUpShift = 0; 									// reset the strat for the next gear
+		}
+		else {
+			MyOutputs->xClutchTargetShift = 0;
+		}
 
 		if(ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
 
@@ -176,12 +188,12 @@ void PRE_UPSHIFT_Run(void) {
 	}
 	else { ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear]) {		// trying to shift up with too low rpm
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear]) {								// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
 
-	if(MyInputs->NGear + 1 > TOTAL_GEARS)	{	// trying to shift up after last gear
+	if(MyInputs->NGear + 1 > TOTAL_GEARS)	{													// trying to shift up after last gear
 		RaiseControlError(TARGET_GEAR_EXCEEDS_MAX);
 	}
 	else { ClearControlError(TARGET_GEAR_EXCEEDS_MAX); }
@@ -208,8 +220,16 @@ void PRE_DNSHIFT_Event(void) {
 
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
-		MyOutputs->NGearTarget = MyInputs->NGear - 1;								// we go to the previous gear
-		MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyOutputs->NGear];	// we set the xClutch target to the target of the current gear
+	MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
+		MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyOutputs->NGear];				// we set the xClutch target to the target of the current gear
+
+		if(CLUTCH_ACTUATION_DURING_DNSHIFT || MyOutputs->BOverrideActuateClutchOnDnShift) {		// we check for clutch strategy during shift
+			MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyInputs->NGear];
+			MyOutputs->BOverrideActuateClutchOnDnShift = 0; 									// reset the strat for the next gear
+		}
+		else {
+			MyOutputs->xClutchTargetShift = 0;
+		}
 
 		if(ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
 
@@ -233,12 +253,12 @@ void PRE_DNSHIFT_Run(void) {
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear]) {		// trying to shift down with too high rpm
+	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear]) {								// trying to shift down with too high rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_DNSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_DNSHIFT); }
 
-	if(MyInputs->NGear == 0)	{	// trying to shift down from neutral
+	if(MyInputs->NGear == 0)	{																// trying to shift down from neutral
 		RaiseControlError(TARGET_GEAR_LESS_THAN_NEUTRAL);
 	}
 	else { ClearControlError(TARGET_GEAR_LESS_THAN_NEUTRAL); }
@@ -272,6 +292,13 @@ void SHIFTING_Event(void) {
 void SHIFTING_Run(void) {
 
 	// run the timer for each gear/up-down (there are tables for that) and NShiftRequest tells us the direction
+
+	// based on the error status and the srat preferences decide in which controller to enter
+
+	// PID
+
+
+	// FEED FORWARD
 
 }
 

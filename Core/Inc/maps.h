@@ -13,16 +13,13 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
-//uint16_t NGearMap[TOTAL_GEARS][2] = {	// TODO: needs to go in maps.h file
-//
 //    {3600, 3750},  // Gear 0
 //    {3900, 4000},  // Gear 1
 //    {3200, 3300},  // Gear 2
 //    {2250, 2400},  // Gear 3
 //    {1300, 1500},  // Gear 4
 //    {400, 600}     // Gear 5
-//
-//};
+
 
 static const float NGearMap[2][TOTAL_GEARS] = {
 
@@ -50,12 +47,20 @@ static const uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {		10000,	// 1st to neutr
 };
 
 
-static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS] = {		0,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
+static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS] = { 	10000,	// neutral to 1st xClutchTarget
+																10000,	// 1st to 2nd
+																10000,	// 2nd to 3rd
+																10000,	// 3rd to 4th
+																10000,	// 4th to 5th
+};
+
+static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS] = {	10000,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
 																10000,	// 2nd to 1st
 																10000,	// 3rd to 2nd
 																10000,	// 4th to 3rd
 																10000,	// 5th to 4th
 };
+
 
 
 static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)

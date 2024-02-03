@@ -7,12 +7,18 @@
 
 #include <Outputs.h>
 
+// CAN
+uint32_t nCanTxErrorCount=0;
+uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
+volatile uint8_t bCanTxMailboxEmpty[3] = {1,1,1};
+
+
 //  private variables
 uint32_t msg_interval, msg_previous, button_previous, button_interval, msg_interval,shift_end_time;
 uint8_t TxData[8];
 
 // private function declarations
-void CAN_Tx(uint32_t ID, uint8_t dlc, uint8_t* data);
+void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data);
 void shiftup_activation(OutputStruct *output);
 void shiftdown_activation(OutputStruct *output);
 void neutral_activation(OutputStruct *output);
@@ -76,27 +82,10 @@ void WriteOutputs(OutputStruct *output) {
 		TxData[0]=(output->down_port_state || output->up_port_state);
 		TxData[1]=output->current_gear;
 
-		CAN_Tx(STEERING_ID,2,TxData);
+		CAN_TX(DISPLAY_TX_ID,2,TxData);
 
 }
 
-void CAN_Tx(uint32_t ID, uint8_t dlc, uint8_t* data) {
-
-	CAN_TxHeaderTypeDef TxHeader;
-
-	uint32_t TxMailbox;
-
-	TxHeader.DLC = dlc;
-	TxHeader.StdId = ID;
-	TxHeader.IDE = CAN_ID_STD;
-	TxHeader.RTR = CAN_RTR_DATA;
-
-	// TODO: fix CANTx with round robin
-	if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, data, &TxMailbox) != HAL_OK) {
-
-	}
-
-}
 
 
 void shiftup_activation(OutputStruct *output){ // Shift up function
@@ -142,4 +131,41 @@ void end_of_shift(OutputStruct *output) {  //Shift Handling
 }
 
 
+void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {
 
+	CAN_TxHeaderTypeDef CanTxHeader;
+	uint32_t nCanTxMailbox;
+
+	CanTxHeader.DLC = dlc;
+	CanTxHeader.StdId = ID;
+	CanTxHeader.IDE = CAN_ID_STD;
+	CanTxHeader.RTR = CAN_RTR_DATA;
+
+	uint32_t wait = __HAL_TIM_GET_COUNTER(&htim2) + CAN_TX_TIMEOUT;
+	while((HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0) && (__HAL_TIM_GET_COUNTER(&htim2) < wait));
+
+	if(HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0) {	// all mailboxes are still filled
+		HAL_CAN_AbortTxRequest(&hcan, nCanOldestMailbox);
+	}
+
+	if(HAL_CAN_AddTxMessage(&hcan, &CanTxHeader, data, &nCanTxMailbox) != HAL_OK) {
+		print("Failed to Add Message can 1\n");
+		nCanTxErrorCount++;
+		return;
+	}
+
+	// Mailbox aging adjustment
+	if(nCanTxMailbox != nCanYoungestMailbox) {
+
+		if(nCanTxMailbox != nCanSecondOldestMailbox) {
+			nCanOldestMailbox = nCanSecondOldestMailbox;
+			nCanSecondOldestMailbox = nCanYoungestMailbox;
+			nCanYoungestMailbox = nCanTxMailbox;
+		}
+		else {
+			nCanSecondOldestMailbox = nCanYoungestMailbox;
+			nCanYoungestMailbox = nCanTxMailbox;
+		}
+	}
+
+}

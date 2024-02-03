@@ -15,8 +15,9 @@
 #define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// flag to allow/not allow spark cut during upshifts
 #define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// flag to allow/not allow spark cut during dnshifts
 
-#define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0	// flag to allow/not allow downshift from 1st to neutral without pulling the clutch paddle
-
+#define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// flag to allow/not allow downshift from 1st to neutral without pulling the clutch paddle
+#define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// flag to allow/not allow clutch actuation during upshift
+#define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// flag to allow/not allow clutch actuation during dnshift
 
 // TIMING
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
@@ -95,6 +96,14 @@ typedef struct {
 	// ECU
 	uint8_t BSparkCut;						// flag to send to the ECU for spark cutting
 	uint8_t BLaunchControl;					// flag to send to the ECU for launch control
+
+	// STRATEGIES
+	uint8_t BOverrideActuateClutchOnUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
+	uint8_t BOverrideActuateClutchOnDnShift;	// if one it will actuate the clutch on the next DnShift, then it gets automatically disabled
+
+	// PID Control
+	uint8_t BPIDRunning;					// 1 when the PID controller is running
+	uint8_t BPIDTimeout;					// 1 if the PID controller did not manage to reach the target before the timeout
 
 }OutputStruct;
 
