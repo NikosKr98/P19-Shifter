@@ -77,28 +77,38 @@ typedef struct _InputStruct {
 	float NGearRaw;							// raw gear value interpolated from the NGear 2D map
 	uint8_t NGear;							// actual gear based on filtered gear potentiometer voltage and conditioned value
 
-	// Shifts & Buttons
 	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
 
+	// Shift Inputs
 	uint8_t BUpShiftButtonCANInError;		// 1 if steering wheel CAN UpShift button is in Error
 	uint8_t BUpShiftButtonCAN;				// steering wheel CAN UpShift button (reflects the state of the paddle)
 	uint8_t BDnShiftButtonCANInError;		// 1 if steering wheel CAN DnShift button is in Error
 	uint8_t BDnShiftButtonCAN;				// steering wheel CAN DnShift button (reflects the state of the paddle)
 
 	uint8_t BUpDnShiftButtonAnalogInError;	// 1 if the internal Analog measurement of UpDnShift button is in error
-	uint8_t NBUpDnShiftButtonAnalog;			// 0:none 1:Up 2:Dn Internal Analog measurement of UpShift button (reflects the state of the paddle)
+	uint8_t NBUpDnShiftButtonAnalog;		// 0:none 1:Up 2:Dn Internal Analog measurement of UpShift button (reflects the state of the paddle)
 
 	uint8_t BUpShiftRequestInError;			// 1 if UpShift request is in error
 	uint8_t BUpShiftRequest;				// UpShift request (reflects the state of the paddle)
-	uint8_t BDnShiftRequestInError;				// 1 if DnShift request is in error
+	uint8_t BDnShiftRequestInError;			// 1 if DnShift request is in error
 	uint8_t BDnShiftRequest;				// DnShift request (reflects the state of the paddle)
-	uint8_t NBUpshiftRequestSource;			// can be CAN or Analog
-	uint8_t NBDnshiftRequestSource;			// can be CAN or Analog
+	SignalSource NBUpshiftRequestSource;	// CAN or Analog
+	SignalSource NBDnshiftRequestSource;	// CAN or Analog
 
+	// Launch Button
 	uint8_t BLaunchButtonCANInError;		// 1 if steering wheel CAN Launch control Button is in error
 	uint8_t BLaunchButtonCAN;				// steering wheel CAN Launch control Button (reflects the state of the button)
 	uint8_t BLaunchRequestInError;			// 1 if steering wheel CAN Launch control Button is in error
 	uint8_t BLaunchRequest;					// Launch control Button (reflects the state of the button)
+
+	// Emergency Button
+	uint8_t BEmergencyButtonCANInError;		// 1 if steering wheel CAN Emergency Button is in error
+	uint8_t BEmergencyButtonCAN;			// steering wheel CAN Emergency Button (reflects the state of the button)
+	uint8_t BEmergencyButtonAnalogInError;	// 1 if Analog Emergency Button is in error
+	uint8_t BEmergencyButtonAnalog;			// Analog Emergency Button (reflects the state of the button)
+	uint8_t BEmergencyRequestInError;		// 1 if steering wheel CAN Emergency Button is in error
+	uint8_t BEmergencyRequest;				// Emergency Button (reflects the state of the button)
+	SignalSource NBEmergencyRequestSource;	// CAN or Analog
 
 	// Clutch Paddles
 	uint8_t BrClutchPaddleRawCANInError;	// 1 if CAN clutch paddle value is in error

@@ -29,9 +29,14 @@ static const float NGearMap[2][TOTAL_GEARS] = {
 
 
 
+static const uint16_t nEngineAntistallMap[TOTAL_GEARS-1] = { 	2000,	// 1st min rpm threshold (not needed for neutral gear)
+																2000,	// 2nd
+																2000,	// 3rd
+																2000,	// 4th
+																2000,	// 5th
+};
 
-
-static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 		0,	// neutral to 1st gear min rpm threshold
+static const uint16_t nEngineUpShiftMap[TOTAL_GEARS-1] = { 		0,	// neutral to 1st gear min rpm threshold
 																0,	// 1st to 2nd
 																0,	// 2nd to 3rd
 																0,	// 3rd to 4th
@@ -39,7 +44,7 @@ static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 		0,	// neutral to 1st 
 };
 
 
-static const uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {		10000,	// 1st to neutral gear max rpm threshold
+static const uint16_t nEngineDnShiftMap[TOTAL_GEARS-1] = {		10000,	// 1st to neutral gear max rpm threshold
 																10000,	// 2nd to 1st
 																10000,	// 3rd to 2nd
 																10000,	// 4th to 3rd
@@ -47,23 +52,23 @@ static const uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {		10000,	// 1st to neutr
 };
 
 
-static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS] = { 	10000,	// neutral to 1st xClutchTarget
-																10000,	// 1st to 2nd
-																10000,	// 2nd to 3rd
-																10000,	// 3rd to 4th
-																10000,	// 4th to 5th
+static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS-1] = { 	10000,	// neutral to 1st xClutchTarget
+																	10000,	// 1st to 2nd
+																	10000,	// 2nd to 3rd
+																	10000,	// 3rd to 4th
+																	10000,	// 4th to 5th
 };
 
-static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS] = {	10000,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
-																10000,	// 2nd to 1st
-																10000,	// 3rd to 2nd
-																10000,	// 4th to 3rd
-																10000,	// 5th to 4th
+static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS-1] = {	10000,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
+																	10000,	// 2nd to 1st
+																	10000,	// 3rd to 2nd
+																	10000,	// 4th to 3rd
+																	10000,	// 5th to 4th
 };
 
 
 
-static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)
+static const uint32_t tUpShift[TOTAL_GEARS-1] = { 				100,	// neutral to 1st gear valve activation time (ms)
 																100,	// 1st to 2nd
 																100,	// 2nd to 3rd
 																100,	// 3rd to 4th
@@ -71,7 +76,7 @@ static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear 
 };
 
 
-static const uint32_t tDnShift[TOTAL_GEARS] = {					200,	// 1st to neutral gear valve activation time (ms)
+static const uint32_t tDnShift[TOTAL_GEARS-1] = {				200,	// 1st to neutral gear valve activation time (ms)
 																200,	// 2nd to 1st
 																200,	// 3rd to 2nd
 																200,	// 4th to 3rd

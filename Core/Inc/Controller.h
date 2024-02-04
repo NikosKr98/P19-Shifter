@@ -12,13 +12,17 @@
 
 
 // STRATEGIES
-#define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// flag to allow/not allow spark cut during upshifts
-#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// flag to allow/not allow spark cut during dnshifts
+#define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// spark cut during upshifts
+#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// spark cut during dnshifts
 
-#define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// flag to allow/not allow downshift from 1st to neutral without pulling the clutch paddle
-#define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// flag to allow/not allow clutch actuation during upshift
-#define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// flag to allow/not allow clutch actuation during dnshift
+#define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
+#define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
+#define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
 
+#define ANTISTALL_ACTIVE					1		// antistall enable strategy
+#define ANTISTALL_TRIGGER_TIME				1000	// antistall ms timeout for triggering
+#define ANTISTALL_CLUTCHPADDLE_PRESSED		100		// the clutch paddle % we need to press the paddle to deactivate the antistall
+#define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
 // TIMING
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
 #define PRE_DNSHIFT_THRESHOLD_TIME			300		// the time we keep trying to accept an downshift request before we deny it
@@ -26,7 +30,7 @@
 // CLUTCH
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
 #define CLUTCH_DNSHIFT_TARGET				100		// the clutch target opening during downshifts
-
+#define MAX_CLTCH_OPENING					10000	// max opening for clutch
 
 // STATE MACHINE STATES
 typedef enum _States {
@@ -55,6 +59,12 @@ typedef enum _Shifts{
 	Down,
 	Unknown
 }Shifts;
+
+typedef enum _AntistallState{
+	Off,
+	Init,
+	Active
+} AntistallState;
 
 
 typedef struct {
@@ -100,6 +110,7 @@ typedef struct {
 	// STRATEGIES
 	uint8_t BOverrideActuateClutchOnUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
 	uint8_t BOverrideActuateClutchOnDnShift;	// if one it will actuate the clutch on the next DnShift, then it gets automatically disabled
+	AntistallState NAntistallState;				// the state of the antistall strategy
 
 	// PID Control
 	uint8_t BPIDRunning;					// 1 when the PID controller is running

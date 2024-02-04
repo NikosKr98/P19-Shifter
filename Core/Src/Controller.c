@@ -18,8 +18,9 @@ Shifts NShiftRequest;
 
 
 
-
-uint32_t tPreShiftTimer=0;
+// timing variables
+uint32_t tPreShiftTimer;
+uint32_t tControllerCurrent, tAntistall;
 
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
@@ -43,21 +44,57 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 //	myInputs = inputs;   // TODO: previously here... we should not need to do the copy every time, they are pointers
 //	myOutputs = outputs;
-
+	tControllerCurrent = HAL_GetTick();
 
 	// ANTISTALL
-		// make the check that we are not actually pressing the clutch...if yes disable the strat
-	// make check if rpm =0 to not be active all the time if the car is stuck with gear inside and 0 rpm
-	// only if BDriverKill is active (shutdown is closed (armed)). Think about other scenarios
-	// if rClutchPaddle is in error accept going out from Antistall also with shift down with Clutch actuatuation. Think about
-	// the CLUTCH_ACTUATION_DURING_UP?DNSHIFT. -> create override variable
-	// BOverrideActuateClutchOnUpShift = 1 or/and BOverrideActuateClutchOnDnShift = 1
+
+	// TODO: TO BE RECHECKED FOR ALL POSSIBLE SITUATION !!!!!!!!!!!!!!!!!!!! NOT 100% sure it is ok
+	if(ANTISTALL_ACTIVE) { // TODO: think about doing it with #ifdef
+
+		if(!MyInputs->BDriverKill && MyInputs->NGear > 0) {	// if the shut down is activated and we are at gear greater than neutral
+
+			// TODO: think about NGear, rClutchPaddle (OK) , nEngine in Error, what will it do??
+			// think about putting time for each gear below its mapped antistall rpm. Maybe too much and not actually needed
+			if(MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyOutputs->NAntistallState != Active && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
+
+				if(MyOutputs->NAntistallState == Off) {
+					MyOutputs->NAntistallState = Init;
+					tAntistall = HAL_GetTick();
+				}
+
+				if(MyOutputs->NAntistallState == Init && (tAntistall + ANTISTALL_TRIGGER_TIME) < tControllerCurrent) {
+					MyOutputs->NAntistallState = Active;
+					MyOutputs->xClutchTargetProtection = MAX_CLTCH_OPENING;
+				}
+
+			}
+
+			else if (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear]) {
+				MyOutputs->NAntistallState = Off;
+			}
+
+			if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
+				MyOutputs->NAntistallState = Off;
+				MyOutputs->xClutchTargetProtection = 0;
+			}
+
+		}
+
+		else {
+			MyOutputs->NAntistallState = Off;
+			MyOutputs->xClutchTargetProtection = 0;
+		}
+
+	}
+
 
 	// CLUTCH CONTROLLER
 		// TODO: attention to xClutch , (always??? take the max of Manualtarget and ControlTarget)
 		// define the map rClutchPaddle to xClutchTargetManual
 		// do the check for rClutchPaddle in error (and if 1 do not actuate clutch -> keep the xClutchTargetManual to 0 and only generate Protection/Shift targets)
-
+	// create lookup table running request for accel and emergency clutchButton release
+	// needs to be working always (even with BDriverKill = 1)
+	// if the clutch paddle is in error, use the emergency button and run a simple release map
 
 
 

@@ -23,6 +23,7 @@ uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0;
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
 volatile uint8_t BDnShiftButtonCAN, BDnShiftButtonCANInError;
 volatile uint8_t BLaunchRequestCAN, BLaunchButtonCANInError;
+volatile uint8_t BEmergencyButtonCAN, BEmergencyButtonCANInError;
 volatile int8_t rClutchPaddleRawCAN, BrClutchPaddleRawInErrorCAN;
 volatile uint16_t nEngineRawCAN;
 volatile uint32_t tCANSteeringWheelLastSeen;
@@ -52,6 +53,9 @@ void ReadInputs(InputStruct *inputs){
 	    // TODO: we need to think the order of execution of the inputs (now they are a bit random)
 	    // check if there are dependencies
 
+	    // TODO: think about putting the analog read (buckup) buttons inside the CAN error state to gain some time during normal running
+	    // or, do them at the same time and compare inputs
+
 	// ---------------------------------------------------------------------------------------------------
 		// Driver Kill
 
@@ -76,7 +80,10 @@ void ReadInputs(InputStruct *inputs){
 		inputs->NGear = CLAMP(inputs->NGear, 0, MAX_GEAR);
 
 		// check for errors
-		if(inputs->BNGearInError) RaiseFault(inputs, NGEAR_FAULT);
+		if(inputs->BNGearInError) {
+			RaiseFault(inputs, NGEAR_FAULT);
+			// inputs->NGear = 1; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
+		}
 		else ClearFault(inputs, NGEAR_FAULT);
 
 	// ---------------------------------------------------------------------------------------------------
@@ -89,6 +96,35 @@ void ReadInputs(InputStruct *inputs){
 		else {
 			inputs->BSteeringWheelFitted = 1;
 			ClearFault(inputs, STEERING_WHEEL_FAULT);
+		}
+
+	// ---------------------------------------------------------------------------------------------------
+		// Emergency Button Conditioning
+
+		// CAN Input
+		inputs->BEmergencyButtonCANInError = BEmergencyButtonCANInError;
+		inputs->BEmergencyButtonCAN = BEmergencyButtonCAN;
+
+		// Analog Input
+				// TODO: digital read with debounce
+				// do the window up and down checks and define if in the correct range
+				// define if in error
+
+
+		// Emergency Input Strategy
+		if(inputs->BSteeringWheelFitted && !inputs->BEmergencyButtonCANInError) {
+			inputs->BEmergencyRequest = inputs->BEmergencyButtonCAN;
+			inputs->NBEmergencyRequestSource = CAN;
+			inputs->BEmergencyRequestInError = 0;
+		}
+		else if(!inputs->BEmergencyButtonAnalogInError) {
+			inputs->BEmergencyRequest = inputs->BEmergencyButtonAnalog;
+			inputs->NBEmergencyRequestSource = Analog;
+			inputs->BEmergencyRequestInError = 0;
+		}
+		else {
+			inputs->BEmergencyRequestInError = 1;
+			inputs->BEmergencyRequest = 0;		// we force to zero if in error
 		}
 
 	// ---------------------------------------------------------------------------------------------------
@@ -115,6 +151,7 @@ void ReadInputs(InputStruct *inputs){
 		}
 		else {
 			inputs->BrClutchPaddleInError = 1;
+			rClutchPaddleRaw = (inputs->BEmergencyRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
 		}
 
 		// CLAMPING
@@ -149,6 +186,7 @@ void ReadInputs(InputStruct *inputs){
 		}
 		else {
 			inputs->BUpShiftRequestInError = 1;
+			inputs->BUpShiftRequest = 0;		// we force to zero if in error
 		}
 
 		// DnShift Input Strategy
@@ -164,6 +202,7 @@ void ReadInputs(InputStruct *inputs){
 		}
 		else {
 			inputs->BDnShiftRequestInError = 1;
+			inputs->BDnShiftRequest = 0;		// we force to zero if in error
 		}
 
 	// ---------------------------------------------------------------------------------------------------
@@ -179,6 +218,7 @@ void ReadInputs(InputStruct *inputs){
 		}
 		else {
 			inputs->BLaunchRequestInError = 1;
+			inputs->BLaunchRequest = 0;		// we force to zero if in error
 		}
 
 	// ---------------------------------------------------------------------------------------------------
@@ -195,6 +235,7 @@ void ReadInputs(InputStruct *inputs){
 		if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tCurrent) {
 			inputs->BnEngineInError = 1;
 			inputs->BnEngineReliable = 0;
+			inputs->nEngine = 0; 		// we force to zero if in error
 			RaiseFault(inputs, ECU_COMMS_FAULT);
 		}
 		else {
@@ -206,6 +247,11 @@ void ReadInputs(InputStruct *inputs){
 		inputs->nEngine = nEngineRawCAN; // TODO: conversion??
 		// TODO: we have both in error and reliable. In the controller we will consider reliable as the strategy
 		// think about doing extra checks apart from CANRx timing
+
+
+		if(inputs->BnEngineInError) {
+			inputs->nEngine = 0; 		// we force to zero if in error
+		}
 
 	// ---------------------------------------------------------------------------------------------------
 		// CAN Diagnostics
@@ -284,7 +330,9 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 		 BDnShiftButtonCANInError = RxBuffer[1] & 0x80; 	// TODO: TBC...
 		 BLaunchRequestCAN = RxBuffer[2];
 		 BLaunchButtonCANInError = RxBuffer[2] & 0x80; 	// TODO: TBC...
-		 rClutchPaddleRawCAN = RxBuffer[3];
+		 BEmergencyButtonCAN = RxBuffer[2];
+		 BEmergencyButtonCANInError = RxBuffer[2] & 0x80; // TODO: TBC...
+		 rClutchPaddleRawCAN = RxBuffer[4];
 		 // TODO: BrClutchPaddleRawInErrorCAN = ... 	// TODO: TBC...
 		 break;
 
