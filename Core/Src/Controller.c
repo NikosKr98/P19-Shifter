@@ -19,8 +19,7 @@ Shifts NShiftRequest;
 
 
 // timing variables
-uint32_t tPreShiftTimer;
-uint32_t tControllerCurrent, tAntistall;
+uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tAntistallTimmer;
 
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
@@ -44,7 +43,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 //	myInputs = inputs;   // TODO: previously here... we should not need to do the copy every time, they are pointers
 //	myOutputs = outputs;
-	tControllerCurrent = HAL_GetTick();
+	tControllerTimmer = HAL_GetTick();
 
 	// ANTISTALL
 
@@ -59,10 +58,10 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 				if(MyOutputs->NAntistallState == Off) {
 					MyOutputs->NAntistallState = Init;
-					tAntistall = HAL_GetTick();
+					tAntistallTimmer = HAL_GetTick();
 				}
 
-				if(MyOutputs->NAntistallState == Init && (tAntistall + ANTISTALL_TRIGGER_TIME) < tControllerCurrent) {
+				if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 					MyOutputs->NAntistallState = Active;
 					MyOutputs->xClutchTargetProtection = MAX_CLTCH_OPENING;
 				}
@@ -220,17 +219,17 @@ void PRE_UPSHIFT_Event(void) {
 }
 void PRE_UPSHIFT_Run(void) {
 
-	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST) {	// trying to put 1st gear without clutch
+	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_FIRST_WITHOUT_CLUTCH) {	// trying to put 1st gear without clutch
 		RaiseControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH);
 	}
 	else { ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear]) {								// trying to shift up with too low rpm
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError) {									// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
 
-	if(MyInputs->NGear + 1 > TOTAL_GEARS)	{													// trying to shift up after last gear
+	if(MyInputs->NGear + 1 > TOTAL_GEARS)	{																					// trying to shift up after last gear
 		RaiseControlError(TARGET_GEAR_EXCEEDS_MAX);
 	}
 	else { ClearControlError(TARGET_GEAR_EXCEEDS_MAX); }
@@ -257,8 +256,7 @@ void PRE_DNSHIFT_Event(void) {
 
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
-	MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
-		MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyOutputs->NGear];				// we set the xClutch target to the target of the current gear
+		MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
 
 		if(CLUTCH_ACTUATION_DURING_DNSHIFT || MyOutputs->BOverrideActuateClutchOnDnShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyInputs->NGear];
@@ -290,12 +288,12 @@ void PRE_DNSHIFT_Run(void) {
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear]) {								// trying to shift down with too high rpm
+	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError) {									// trying to shift down with too high rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_DNSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_DNSHIFT); }
 
-	if(MyInputs->NGear == 0)	{																// trying to shift down from neutral
+	if(MyInputs->NGear == 0)	{																								// trying to shift down from neutral
 		RaiseControlError(TARGET_GEAR_LESS_THAN_NEUTRAL);
 	}
 	else { ClearControlError(TARGET_GEAR_LESS_THAN_NEUTRAL); }
@@ -306,12 +304,20 @@ void SHIFTING_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTING_STATE;
 
-	if(NPreviousState == PRE_UPSHIFT_STATE) NShiftRequest = Up;
-	else if(NPreviousState == PRE_DNSHIFT_STATE) NShiftRequest = Down;
+	if(NPreviousState == PRE_UPSHIFT_STATE) {
+		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
+		NShiftRequest = Up;
+	}
+	else if(NPreviousState == PRE_DNSHIFT_STATE) {
+		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
+		NShiftRequest = Down;
+	}
 	else {
 		NCurrentState = Unknown;
 		RaiseControlError(SHIFT_TARGET_UNKNOWN);
 	}
+
+	tShiftTimer = HAL_GetTick();
 }
 void SHIFTING_Exit(void) {
 
@@ -325,12 +331,21 @@ void SHIFTING_Event(void) {
 	}
 
 	// TODO: keep checking for control errors
+
+
+	if((tShiftTimer + tShifterMaxTransitTime) < tControllerTimmer) {	// the max time for the gear has expired
+		// go out and determine if the shift was completed or not
+		return;
+	}
+
 }
 void SHIFTING_Run(void) {
 
 	// run the timer for each gear/up-down (there are tables for that) and NShiftRequest tells us the direction
 
 	// based on the error status and the srat preferences decide in which controller to enter
+
+
 
 	// PID
 
@@ -356,6 +371,8 @@ void POSTSHIFT_Exit(void) {
 }
 void POSTSHIFT_Event(void) {
 
+
+	// remember return in all functions
 }
 void POSTSHIFT_Run(void) {
 
@@ -377,7 +394,7 @@ void ERROR_Event(void) {
 	// the concept is to keep a counter for the number of errors of each type and after a certain point come back and continue normal running with less features
 	// check that all control errors are cleared
 	// and do not zero the logged error status
-
+	// remember return in all functions
 }
 void ERROR_Run(void) {
 

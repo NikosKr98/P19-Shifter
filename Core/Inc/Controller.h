@@ -16,6 +16,7 @@
 #define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// spark cut during dnshifts
 
 #define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
+#define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
 #define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
 #define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
 
