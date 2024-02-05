@@ -22,7 +22,7 @@
 
 #define ANTISTALL_ACTIVE					1		// antistall enable strategy
 #define ANTISTALL_TRIGGER_TIME				1000	// antistall ms timeout for triggering
-#define ANTISTALL_CLUTCHPADDLE_PRESSED		100		// the clutch paddle % we need to press the paddle to deactivate the antistall
+#define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
 // TIMING
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
@@ -30,8 +30,10 @@
 
 // CLUTCH
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
-#define CLUTCH_DNSHIFT_TARGET				100		// the clutch target opening during downshifts
-#define MAX_CLTCH_OPENING					10000	// max opening for clutch
+#define CLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
+#define CLUTCH_MAX_OPENING					1900	// max opening for clutch
+
+
 
 // STATE MACHINE STATES
 typedef enum _States {
@@ -92,13 +94,14 @@ typedef struct {
 
 	// CLUTCH
 	uint16_t xClutchTargetProtection;		// the clutch target opening requested from the protection/antistall strategy
-	uint16_t xClutchTargetManual;			// the clutch target opening requested from the clutch pad
+	float xClutchTargetManual;			// the clutch target opening requested from the clutch pad
 	uint16_t xClutchTargetShift;			// the clutch target opening requested from the shift control
+	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated
 
 	// SHIFTER
 	uint8_t BUpShiftPortState;				// 1 when the UpShift port is being actuated
-	uint8_t BDownShiftPortState;			// 1 when the DownShift port is being actuated
+	uint8_t BDnShiftPortState;				// 1 when the DownShift port is being actuated
 	uint32_t tLastUpShiftTransitTime_us;	// the time it actually took to shift the gear Up in the last actuation (for performance measurement)
 	uint32_t tLastDnShiftTransitTime_us;	// the time it actually took to shift the gear Dn in the last actuation (for performance measurement)
 	uint16_t NTotalShifts;					// total number of shifts done since powerup

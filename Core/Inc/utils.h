@@ -45,7 +45,7 @@ extern TIM_HandleTypeDef htim1;
 
 // FUNCTION PROTOTYPES
 void print(char *msg, ...);
-
+uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float *output, float minMargin, float maxMargin);
 
 
 #endif /* INC_UTILS_H_ */

@@ -17,7 +17,7 @@
 uint32_t tCurrent;
 
 // I/O Flags
-uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0;
+uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BEmergencyRequested=0;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
@@ -41,7 +41,6 @@ int8_t rClutchPaddleRaw;
 // private functions declaration
 uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw);
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side);
-uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float *output, float minMargin, float maxMargin);
 
 void ReadInputs(InputStruct *inputs){
 
@@ -72,6 +71,8 @@ void ReadInputs(InputStruct *inputs){
 
 		// mapping
 		inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGearRaw, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
+
+		// TODO: think about checking the float NGear for +-0.2 to define false neutral
 
 		// conditioning (round float to nearest integer)
 		inputs->NGear = (uint8_t)round(inputs->NGearRaw);
@@ -288,6 +289,15 @@ void ReadInputs(InputStruct *inputs){
 			PushEvent(inputs, LAUNCH_RELEASE_EVT);
 		}
 
+		if(!inputs->BEmergencyRequestInError && inputs->BEmergencyRequest && !BEmergencyRequested) {
+			BEmergencyRequested = 1;
+			PushEvent(inputs, EMERGENCY_PRESS_EVT);
+		}
+		else if(!inputs->BEmergencyRequestInError && !inputs->BEmergencyRequest && BEmergencyRequested) {
+			BEmergencyRequested = 0;
+			PushEvent(inputs, EMERGENCY_RELEASE_EVT);
+		}
+
 		if(!inputs->BrClutchPaddleInError && (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD)) {
 			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
 		}
@@ -358,36 +368,6 @@ uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw) {
     return 1; // If no match found, return error!
 }
 
-uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float *output, float minMargin, float maxMargin) {
-	float dx, dy;
-	int i;
-
-	if(input < map[0][0] - minMargin) {
-		// if input is less than the smaller element of the map minus a small margin,
-		// we declare the input in error and assign the min value of the map
-		*output = map[1][0];
-		return 1;
-	}
-	if(input > map[0][size-1] + maxMargin) {
-		// if input is greater than the largest element of the map plus a small margin,
-		// we declare the input in error and assign the max value of the map
-		*output = map[1][size-1];
-		return 1;
-	}
-
-	// we find i so that map[0][i] < input < map[0][i+1]
-	for(i=0; i<size; i++) {
-		if(map[0][i+1] > input)
-			break;
-	}
-
-	// we interpolate
-	dx = map[0][i+1] - map[0][i];
-	dy = map[1][i+1] - map[1][i];
-
-	*output = (float)(map[1][i] + (input - map[0][i]) * dy/dx);
-	return 0;
-}
 
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side) {
 

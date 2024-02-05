@@ -27,62 +27,30 @@ void end_of_shift(OutputStruct *output);
 
 void InitOutputs(void) {
 
+	// TODO: start the timer with initial target the released value (make the #define and also use it in the maps??)
 }
 
 void WriteOutputs(OutputStruct *output) {
 
-	end_of_shift(output);
+	// CLUTCH
 
-
-	if(output->up_button_out){
-		output->target_gear++;
-
-		if(output->target_gear!=output->current_gear+1){
-			output->target_gear--;
-		}
-
-		if(output->target_gear > 5){ // TODO: to be fixed
-			output->target_gear=5;
-		}
-		else if(output->target_gear > 1 && output->target_gear <= 5){
-			shiftup_activation(output);
-		}
-		else if(output->target_gear == 1 && output->clutch_detection){
-			shiftdown_activation(output);
-		}
-		else {
-			output->target_gear = output-> current_gear;
-		}
-	}
-
-
-	if(output->down_button_out){
-		output->target_gear--;
-
-		if(output->target_gear!= output->current_gear-1){
-			output->target_gear++;
-		}
-
-		if(output->target_gear < 0){
-			output->target_gear=0;
-			output->current_gear=output->target_gear;
-		}
-		else if(output->target_gear<1){
-			neutral_activation(output);
-		}
-		else if(output->target_gear>=1){
-			shiftdown_activation(output);
-		}
-	}
+	// Do a clipping on the xClutchTarget to make sure we do not exceed the servo min and max values
+	// put the target directly in the timer period function
+	// The output for the clutch servo is a +5V pulse 50% dutycycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 
 
 
+	// Shifting Ports
+	// remember: Upshift: activated when writing 0 and not activating when writing 1
+	//			 Dnshift: activated when writing 1 and not activating when writing 0
+
+	HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, !output->BUpShiftPortState);
+	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, output->BDnShiftPortState);
 
 
-		TxData[0]=(output->down_port_state || output->up_port_state);
-		TxData[1]=output->current_gear;
 
-		CAN_TX(DISPLAY_TX_ID,2,TxData);
+	// CAN
+
 
 }
 

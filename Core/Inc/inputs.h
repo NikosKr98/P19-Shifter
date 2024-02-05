@@ -24,7 +24,7 @@
 
 // CLUTCH
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 	80		// Threshold % to consider Clutch Paddle as pressed
-#define CLUTCH_PADDLE_MIN					0		// min clutch paddle percentage
+#define CLUTCH_PADDLE_MIN					0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 					100		// max clutch paddle percentage
 
 #define ADC_BUFFER_SIZE 357*2						// is the size of the buffer, 2 halves of 306 samples
@@ -44,6 +44,8 @@ typedef enum _Event {
 	DNSHIFT_RELEASE_EVT,
 	LAUNCH_PRESS_EVT,
 	LAUNCH_RELEASE_EVT,
+	EMERGENCY_PRESS_EVT,
+	EMERGENCY_RELEASE_EVT,
 	CLUTCH_PADDLE_PRESS_EVT,
 	CLUTCH_PADDLE_RELEASE_EVT
 } Event;

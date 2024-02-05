@@ -13,6 +13,8 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
+#define CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
+
 //    {3600, 3750},  // Gear 0
 //    {3900, 4000},  // Gear 1
 //    {3200, 3300},  // Gear 2
@@ -25,6 +27,13 @@ static const float NGearMap[2][TOTAL_GEARS] = {
 
 	/* NGear  */	{  0,     1,     2,     3,     4,     5  },
 	/* VNGear */	{2.981, 3.183, 2.619, 1.894, 1.128, 0.403}
+};
+
+
+static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS] = {
+
+	/* NGear  */	{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,   100},
+	/* VNGear */	{1500, 1575, 1650, 1725, 1800, 1816, 1832, 1848, 1864, 1880, 1900}
 };
 
 
@@ -76,7 +85,7 @@ static const uint32_t tUpShift[TOTAL_GEARS-1] = { 				100,	// neutral to 1st gea
 };
 
 
-static const uint32_t tDnShift[TOTAL_GEARS-1] = {				200,	// 1st to neutral gear valve activation time (ms)
+static const uint32_t tDnShift[TOTAL_GEARS-1] = {				10,	// 1st to neutral gear valve activation time (ms)
 																200,	// 2nd to 1st
 																200,	// 3rd to 2nd
 																200,	// 4th to 3rd

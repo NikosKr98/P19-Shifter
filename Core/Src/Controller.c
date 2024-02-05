@@ -45,87 +45,100 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 //	myOutputs = outputs;
 	tControllerTimmer = HAL_GetTick();
 
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 	// ANTISTALL
+		#ifdef ANTISTALL_ACTIVE
 
-	// TODO: TO BE RECHECKED FOR ALL POSSIBLE SITUATION !!!!!!!!!!!!!!!!!!!! NOT 100% sure it is ok
-	if(ANTISTALL_ACTIVE) { // TODO: think about doing it with #ifdef
+			// if the shut down is activated and we are at gear greater than neutral
+			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError) {
 
-		if(!MyInputs->BDriverKill && MyInputs->NGear > 0) {	// if the shut down is activated and we are at gear greater than neutral
+				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
 
-			// TODO: think about NGear, rClutchPaddle (OK) , nEngine in Error, what will it do??
-			// think about putting time for each gear below its mapped antistall rpm. Maybe too much and not actually needed
-			if(MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyOutputs->NAntistallState != Active && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
+					if(MyOutputs->NAntistallState == Off) {
+						MyOutputs->NAntistallState = Init;
+						tAntistallTimmer = HAL_GetTick();
+					}
 
-				if(MyOutputs->NAntistallState == Off) {
-					MyOutputs->NAntistallState = Init;
-					tAntistallTimmer = HAL_GetTick();
+					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
+						MyOutputs->NAntistallState = Active;
+						MyOutputs->xClutchTargetProtection = CLUTCH_MAX_OPENING;
+					}
 				}
 
-				if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
-					MyOutputs->NAntistallState = Active;
-					MyOutputs->xClutchTargetProtection = MAX_CLTCH_OPENING;
+				if(MyOutputs->NAntistallState == Init && (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear] || MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED)) {
+					MyOutputs->NAntistallState = Off;
+					MyOutputs->xClutchTargetProtection = 0;
 				}
 
+				if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
+					MyOutputs->NAntistallState = Off;
+					MyOutputs->xClutchTargetProtection = 0;
+				}
 			}
 
-			else if (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear]) {
-				MyOutputs->NAntistallState = Off;
-			}
-
-			if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
+			else {
 				MyOutputs->NAntistallState = Off;
 				MyOutputs->xClutchTargetProtection = 0;
 			}
+		#endif
 
-		}
-
-		else {
-			MyOutputs->NAntistallState = Off;
-			MyOutputs->xClutchTargetProtection = 0;
-		}
-
-	}
-
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// CLUTCH CONTROLLER
-		// TODO: attention to xClutch , (always??? take the max of Manualtarget and ControlTarget)
-		// define the map rClutchPaddle to xClutchTargetManual
-		// do the check for rClutchPaddle in error (and if 1 do not actuate clutch -> keep the xClutchTargetManual to 0 and only generate Protection/Shift targets)
-	// create lookup table running request for accel and emergency clutchButton release
-	// needs to be working always (even with BDriverKill = 1)
-	// if the clutch paddle is in error, use the emergency button and run a simple release map
+
+		// Manual target mapping
+		if(!MyInputs->BrClutchPaddleInError) {
+			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
+			// TODO: terminate potential array timed control that runs below
+		}
+		else {
+			if(CheckEvent(EMERGENCY_RELEASE_EVT)) {
+				// TODO: run the release array. here we initialize it
+				// create lookup table running request for accel and emergency clutchButton release
+			}
+			// TODO: Here we keep timers and counter and the state of the mini control and put the values in xClutchTargetManual
+		}
+
+		// TODO: do the array running thing also for the launch sequence.
+		// Decide if upshifts trigger will happen here, or we will be triggered in IDLE and start the clutch sequence here afterwards
+
+		// we take the maximum target generated from the Antistall/Protection strategy, the request
+		// from the driver and the shifter requests when enabled from the respective strategy
+		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
 
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// SHIFTER STATE MACHINE
-	switch (NCurrentState) {
 
-	case IDLE_STATE:
-		IDLE_Run();
-		IDLE_Event();
-		break;
-	case PRE_UPSHIFT_STATE:
-		PRE_UPSHIFT_Run();
-		PRE_UPSHIFT_Event();
-		break;
-	case PRE_DNSHIFT_STATE:
-		PRE_DNSHIFT_Run();
-		PRE_DNSHIFT_Event();
-		break;
-	case SHIFTING_STATE:
-		SHIFTING_Run();
-		SHIFTING_Event();
-		break;
-	case POSTSHIFT_STATE:
-		POSTSHIFT_Run();
-		POSTSHIFT_Event();
-		break;
-	case ERROR_STATE:
-		ERROR_Run();
-		ERROR_Event();
-		break;
-	}
+		switch (NCurrentState) {
 
+		case IDLE_STATE:
+			IDLE_Run();
+			IDLE_Event();
+			break;
+		case PRE_UPSHIFT_STATE:
+			PRE_UPSHIFT_Run();
+			PRE_UPSHIFT_Event();
+			break;
+		case PRE_DNSHIFT_STATE:
+			PRE_DNSHIFT_Run();
+			PRE_DNSHIFT_Event();
+			break;
+		case SHIFTING_STATE:
+			SHIFTING_Run();
+			SHIFTING_Event();
+			break;
+		case POSTSHIFT_STATE:
+			POSTSHIFT_Run();
+			POSTSHIFT_Event();
+			break;
+		case ERROR_STATE:
+			ERROR_Run();
+			ERROR_Event();
+			break;
+		}
 
 }
 
@@ -307,10 +320,12 @@ void SHIFTING_Entry(void) {
 	if(NPreviousState == PRE_UPSHIFT_STATE) {
 		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
 		NShiftRequest = Up;
+		MyOutputs->BUpShiftPortState = 1;
 	}
 	else if(NPreviousState == PRE_DNSHIFT_STATE) {
 		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
 		NShiftRequest = Down;
+		MyOutputs->BDnShiftPortState = 1;
 	}
 	else {
 		NCurrentState = Unknown;
@@ -359,6 +374,10 @@ void POSTSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = POSTSHIFT_STATE;
 
+	// stop all actuation
+	MyOutputs->BUpShiftPortState = 0;
+	MyOutputs->BDnShiftPortState = 0;
+
 	// reset all control variables for the next actuation
 	MyOutputs->xClutchTargetShift = 0;
 	MyOutputs->BSparkCut = 0;
@@ -382,6 +401,9 @@ void POSTSHIFT_Run(void) {
 void ERROR_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = ERROR_STATE;
+
+	// TODO: evaluate if it is correct to stop all output actions here...maybe not
+	// clutch should always work... if we entere here during an actuation, not sure if it is correct to interrupt it
 }
 void ERROR_Exit(void) {
 
