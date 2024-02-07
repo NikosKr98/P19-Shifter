@@ -10,7 +10,6 @@
 // CAN
 uint32_t nCanTxErrorCount=0;
 uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
-volatile uint8_t bCanTxMailboxEmpty[3] = {1,1,1};
 
 
 //  private variables

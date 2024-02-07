@@ -335,21 +335,25 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
 	 case STEERING_RX_ID :
 		 tCANSteeringWheelLastSeen = HAL_GetTick();
-		 BUpShiftButtonCAN = RxBuffer[0] & 0x01;
-		 BUpShiftButtonCANInError = RxBuffer[0] & 0x80;	// TODO: TBC...
-		 BDnShiftButtonCAN = RxBuffer[1] & 0x01;
-		 BDnShiftButtonCANInError = RxBuffer[1] & 0x80; 	// TODO: TBC...
-		 BLaunchRequestCAN = RxBuffer[2];
-		 BLaunchButtonCANInError = RxBuffer[2] & 0x80; 	// TODO: TBC...
-		 BEmergencyButtonCAN = RxBuffer[3];
-		 BEmergencyButtonCANInError = RxBuffer[3] & 0x80; // TODO: TBC...
-		 rClutchPaddleRawCAN = RxBuffer[4];
-		 // TODO: BrClutchPaddleRawInErrorCAN = ... 	// TODO: TBC...
+
+		 BUpShiftButtonCANInError 		= RxBuffer[0] & 0x01;
+		 BDnShiftButtonCANInError 		= RxBuffer[0] & 0x02;
+		 BLaunchButtonCANInError 		= RxBuffer[0] & 0x04;
+		 BEmergencyButtonCANInError 	= RxBuffer[0] & 0x08;
+		 BrClutchPaddleRawInErrorCAN 	= RxBuffer[0] & 0x40;
+
+		 BUpShiftButtonCAN 				= RxBuffer[1] & 0x01;
+		 BDnShiftButtonCAN 				= RxBuffer[1] & 0x02;
+		 BLaunchRequestCAN 				= RxBuffer[1] & 0x04;
+		 BEmergencyButtonCAN 			= RxBuffer[1] & 0x08;
+
+		 rClutchPaddleRawCAN 			= RxBuffer[2];
+
 		 break;
 
 	 case ECU_RX_ID:
 		 tCANECULastSeen = HAL_GetTick();
-		 nEngineRawCAN = RxBuffer[0] << 8 | RxBuffer[1];
+		 nEngineRawCAN = (uint16_t)(RxBuffer[0] << 8 | RxBuffer[1]);
 		 break;
 
 	 default:
