@@ -131,6 +131,8 @@ int main(void)
   InitController(&Inputs,&Outputs);
   InitOutputs();
 
+  HAL_Delay(50);	// we give some time to the peripherals to start and produce normal values
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

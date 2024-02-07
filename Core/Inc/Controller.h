@@ -31,6 +31,7 @@
 // CLUTCH
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
 #define CLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
+#define CLUTCH_REST_POSITION				1100	// the clutch position when not actuated
 #define CLUTCH_MAX_OPENING					1900	// max opening for clutch
 
 
@@ -48,6 +49,7 @@ typedef enum _States {
 
 // CONTROL ERRORS
 typedef enum _ControlError {
+	NO_ERROR,
 	NEUTRAL_TO_FIRST_WITH_NO_CLUTCH,
 	FIRST_TO_NEUTRAL_WITH_NO_CLUTCH,
 	RPM_ILLEGAL_FOR_UPSHIFT,

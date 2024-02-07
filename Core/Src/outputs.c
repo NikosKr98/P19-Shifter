@@ -27,7 +27,7 @@ void end_of_shift(OutputStruct *output);
 
 void InitOutputs(void) {
 
-	// TODO: start the timer with initial target the released value (make the #define and also use it in the maps??)
+	// TODO: start the timer with initial target (CLUTCH_REST_POSITION) the released value (make the #define and also use it in the maps??)
 }
 
 void WriteOutputs(OutputStruct *output) {
@@ -44,6 +44,8 @@ void WriteOutputs(OutputStruct *output) {
 	// remember: Upshift: activated when writing 0 and not activating when writing 1
 	//			 Dnshift: activated when writing 1 and not activating when writing 0
 
+	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
+	// TODO: remember that the inverted sign is only for testing with the old cooling PCBs
 	HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, !output->BUpShiftPortState);
 	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, output->BDnShiftPortState);
 

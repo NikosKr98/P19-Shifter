@@ -237,7 +237,7 @@ void ReadInputs(InputStruct *inputs){
 			inputs->BnEngineInError = 1;
 			inputs->BnEngineReliable = 0;
 			inputs->nEngine = 0; 		// we force to zero if in error
-			RaiseFault(inputs, ECU_COMMS_FAULT);
+//			RaiseFault(inputs, ECU_COMMS_FAULT); // TODO: we temporarily comment if for testing without the ECU
 		}
 		else {
 			inputs->BnEngineInError = 0;
@@ -298,12 +298,13 @@ void ReadInputs(InputStruct *inputs){
 			PushEvent(inputs, EMERGENCY_RELEASE_EVT);
 		}
 
-		if(!inputs->BrClutchPaddleInError && (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD)) {
-			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
-		}
-		else if(!inputs->BrClutchPaddleInError) {
-			PushEvent(inputs, CLUTCH_PADDLE_RELEASE_EVT);
-		}
+		// TODO: the release gets triggered always, so think of a better way to create only 1 event, or eliminate it completely
+//		if(!inputs->BrClutchPaddleInError && (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD)) {
+//			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
+//		}
+//		else if(!inputs->BrClutchPaddleInError) {
+//			PushEvent(inputs, CLUTCH_PADDLE_RELEASE_EVT);
+//		}
 
 
 	// ---------------------------------------------------------------------------------------------------
@@ -340,8 +341,8 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 		 BDnShiftButtonCANInError = RxBuffer[1] & 0x80; 	// TODO: TBC...
 		 BLaunchRequestCAN = RxBuffer[2];
 		 BLaunchButtonCANInError = RxBuffer[2] & 0x80; 	// TODO: TBC...
-		 BEmergencyButtonCAN = RxBuffer[2];
-		 BEmergencyButtonCANInError = RxBuffer[2] & 0x80; // TODO: TBC...
+		 BEmergencyButtonCAN = RxBuffer[3];
+		 BEmergencyButtonCANInError = RxBuffer[3] & 0x80; // TODO: TBC...
 		 rClutchPaddleRawCAN = RxBuffer[4];
 		 // TODO: BrClutchPaddleRawInErrorCAN = ... 	// TODO: TBC...
 		 break;

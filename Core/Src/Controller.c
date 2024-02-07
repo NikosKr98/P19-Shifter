@@ -242,7 +242,7 @@ void PRE_UPSHIFT_Run(void) {
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
 
-	if(MyInputs->NGear + 1 > TOTAL_GEARS)	{																					// trying to shift up after last gear
+	if(MyInputs->NGear + 1 > MAX_GEAR)	{																					// trying to shift up after last gear
 		RaiseControlError(TARGET_GEAR_EXCEEDS_MAX);
 	}
 	else { ClearControlError(TARGET_GEAR_EXCEEDS_MAX); }
@@ -350,6 +350,8 @@ void SHIFTING_Event(void) {
 
 	if((tShiftTimer + tShifterMaxTransitTime) < tControllerTimmer) {	// the max time for the gear has expired
 		// go out and determine if the shift was completed or not
+		SHIFTING_Exit();
+		POSTSHIFT_Entry();
 		return;
 	}
 
@@ -411,6 +413,11 @@ void ERROR_Exit(void) {
 void ERROR_Event(void) {
 
 	// check that all faults are cleared
+	if(!CheckFaults(MyInputs)) {
+		ERROR_Exit();
+		IDLE_Entry();
+		return;
+	}
 		// for some faults that are very critical we could make a counter and when it expires we declare a default hardcoded value to be able to move on
 	// TODO: it must not be completely blocking to be able to comeback from an error.
 	// the concept is to keep a counter for the number of errors of each type and after a certain point come back and continue normal running with less features
@@ -420,5 +427,11 @@ void ERROR_Event(void) {
 }
 void ERROR_Run(void) {
 
+	// we save the last error
+	if(MyOutputs->NControlErrorStatus != 0) {
+		MyOutputs->NControlErrorStatusLogged = MyOutputs->NControlErrorStatus;
+	}
+
 	// TODO: find a way to read the Control Errors and then reset them in order to clear them for the next cycle
+
 }

@@ -25,15 +25,16 @@
 
 static const float NGearMap[2][TOTAL_GEARS] = {
 
-	/* NGear  */	{  0,     1,     2,     3,     4,     5  },
-	/* VNGear */	{2.981, 3.183, 2.619, 1.894, 1.128, 0.403}
+		/* In:  VNGear */	{0.403, 1.128, 1.894, 2.619, 2.981, 3.183},
+		/* Out: NGear  */	{  5,     4,     3,     2,     0,     1  }
+
 };
 
 
 static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS] = {
 
-	/* NGear  */	{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,   100},
-	/* VNGear */	{1500, 1575, 1650, 1725, 1800, 1816, 1832, 1848, 1864, 1880, 1900}
+	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,   100},
+	/* Out: xClutchTarget */		{1500, 1575, 1650, 1725, 1800, 1816, 1832, 1848, 1864, 1880, 1900}
 };
 
 
