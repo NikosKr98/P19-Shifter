@@ -393,6 +393,10 @@ void POSTSHIFT_Exit(void) {
 void POSTSHIFT_Event(void) {
 
 
+	// think about the condition
+	POSTSHIFT_Exit();
+	IDLE_Entry();
+	return;
 	// remember return in all functions
 }
 void POSTSHIFT_Run(void) {

@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include "stm32f1xx_hal.h"
-#include "gpio_init.h"
+#include "main.h"
 
 #define USB_DEBUG 0					// debug information through ST-Link Virtual COM Port (1 = enable, 0 = disable)
 

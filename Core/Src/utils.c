@@ -38,7 +38,7 @@ uint8_t My2DMapInterpolate(int size, const float map[][size], float input, float
 	}
 
 	// we find i so that map[0][i] < input < map[0][i+1]
-	for(i=0; i<size; i++) {
+	for(i=0; i<size-1; i++) {
 		if(map[0][i+1] > input)
 			break;
 	}
