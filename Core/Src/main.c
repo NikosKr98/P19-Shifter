@@ -18,16 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "input.h"
-#include "application.h"
-#include "output.h"
-#include "gpio_init.h"
 /* Private includes ----------------------------------------------------------*/
-
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
-
+#include <Controller.h>
+#include <Inputs.h>
+#include <Outputs.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,17 +32,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-
-
-
-
-
-#define default_msg_interval 100
-#define default_button_interval 50
-
-
-
 
 /* USER CODE END PD */
 
@@ -59,11 +43,23 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+
 CAN_HandleTypeDef hcan;
+
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+uint16_t adcRawValue[ADC_BUFFER_SIZE];
+
+volatile uint8_t BCycleTimerFlag = 0;
+
+// public struct variables
+InputStruct Inputs;
+OutputStruct Outputs;
 
 /* USER CODE END PV */
 
@@ -71,10 +67,12 @@ UART_HandleTypeDef huart1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 
@@ -83,29 +81,6 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-
-//Timing Variables!
-uint32_t current=0,
-		button_previous=0,
-		button_interval=default_button_interval,
-		msg_previous = 0,
-		msg_interval=default_msg_interval,
-		shift_end_time = 0;
-
-//Track CanBus Errors!
-uint8_t can_errors=0;
-
-
-volatile uint16_t adc_counter = 0;
-
-
-CAN_FilterTypeDef FilterConfig0;
-CAN_RxHeaderTypeDef RxHeader;
-CAN_TxHeaderTypeDef TxHeader;
-uint8_t RxData[8]={0},TxData[8]={0};
-
-InputStruct myInput;
-ApplicationStruct myApplication;
 /* USER CODE END 0 */
 
 /**
@@ -121,7 +96,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -137,31 +112,38 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_TIM2_Init();
+  MX_TIM3_Init();
   MX_ADC1_Init();
   MX_CAN_Init();
   MX_USART1_UART_Init();
-  HAL_GPIO_WritePin(VCC_GPIO_Port, VCC_Pin, GPIO_PIN_SET);
+  MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_ADC_Start(&hadc1);
-  Input_init(&myInput);
-  Application_init(&myApplication);
+  HAL_TIM_Base_Start(&htim1);		// general 1MHz timer for timing
+  HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
+//  HAL_TIM_Base_Start(&htim2);		// general timer for PWM use
 
 
+  InitInputs();
+  InitController(&Inputs,&Outputs);
+  InitOutputs();
+
+  HAL_Delay(50);	// we give some time to the peripherals to start and produce normal values
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  current=HAL_GetTick();
-	  Input_Read(&myInput);
-	  Application(&myInput,&myApplication);
-	  Output(&myApplication);
+  while (1) {
 
+	  if(BCycleTimerFlag) {		// BCycleTimerFlag becomes 1 in the Timer callback below
+		  BCycleTimerFlag = 0;
 
+		  ReadInputs(&Inputs);
+		  Controller(&Inputs,&Outputs);
+		  WriteOutputs(&Outputs);
+	  }
 
     /* USER CODE END WHILE */
 
@@ -210,7 +192,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -238,12 +220,12 @@ static void MX_ADC1_Init(void)
   /** Common config
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.NbrOfConversion = 1;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -253,23 +235,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Rank = ADC_REGULAR_RANK_3;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -304,7 +270,7 @@ static void MX_CAN_Init(void)
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = ENABLE;
   hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
@@ -313,36 +279,140 @@ static void MX_CAN_Init(void)
   }
   /* USER CODE BEGIN CAN_Init 2 */
 
+  	  // We setup and enable 2 filters for each message, one of FIFO0 and one for FIFO1
+  	  // like this the message has the chance to enter either FIFO and get received with an interrupt
+  	  // We need to increment the banks to be able to have all filters active at the same time and not overwrite them
 
-  	// FILTER FOR STEERING WHEEL
-
+  	// STEERING WHEEL RECEIVE
    CAN_FilterTypeDef FilterConfig0;
-   FilterConfig0.FilterIdHigh = FROM_STEERING_ID << 5 ;
+   FilterConfig0.FilterIdHigh = STEERING_RX_ID << 5 ;
    FilterConfig0.FilterIdLow = 0;
-   FilterConfig0.FilterMaskIdHigh = 0;
+   FilterConfig0.FilterMaskIdHigh = 0xffe0;
    FilterConfig0.FilterMaskIdLow = 0;
    FilterConfig0.FilterFIFOAssignment = CAN_FILTER_FIFO0;
    FilterConfig0.FilterBank = 0;
-   FilterConfig0.SlaveStartFilterBank = 14;
+   FilterConfig0.SlaveStartFilterBank = 0;
    FilterConfig0.FilterMode = CAN_FILTERMODE_IDMASK;
    FilterConfig0.FilterScale = CAN_FILTERSCALE_32BIT;
    FilterConfig0.FilterActivation = ENABLE;
 
    if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig0)!=HAL_OK) {
  	  Error_Handler();
- 	  can_errors++;
- 	}
-   if(HAL_CAN_Start(&hcan)!=HAL_OK) {
- 	  Error_Handler();
- 	  can_errors++;
-   }
-   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
- 	{
-	   Error_Handler();
-	   can_errors++;
  	}
 
+   CAN_FilterTypeDef FilterConfig01;
+   FilterConfig01.FilterIdHigh = STEERING_RX_ID << 5 ;
+   FilterConfig01.FilterIdLow = 0;
+   FilterConfig01.FilterMaskIdHigh = 0xffe0;
+   FilterConfig01.FilterMaskIdLow = 0;
+   FilterConfig01.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+   FilterConfig01.FilterBank = 1;
+   FilterConfig01.SlaveStartFilterBank = 0;
+   FilterConfig01.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig01.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig01.FilterActivation = ENABLE;
+
+   if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig01)!=HAL_OK) {
+ 	  Error_Handler();
+ 	}
+
+ 	// ECU RECEIVE
+   CAN_FilterTypeDef FilterConfig1;
+   FilterConfig1.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig1.FilterIdLow = 0;
+   FilterConfig1.FilterMaskIdHigh = 0xffe0;
+   FilterConfig1.FilterMaskIdLow = 0;
+   FilterConfig1.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+   FilterConfig1.FilterBank = 2;
+   FilterConfig1.SlaveStartFilterBank = 0;
+   FilterConfig1.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig1.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig1.FilterActivation = ENABLE;
+
+   if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig1)!=HAL_OK) {
+ 	  Error_Handler();
+ 	}
+
+   CAN_FilterTypeDef FilterConfig11;
+   FilterConfig11.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig11.FilterIdLow = 0;
+   FilterConfig11.FilterMaskIdHigh = 0xffe0;
+   FilterConfig11.FilterMaskIdLow = 0;
+   FilterConfig11.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+   FilterConfig11.FilterBank = 3;
+   FilterConfig11.SlaveStartFilterBank = 0;
+   FilterConfig11.FilterMode = CAN_FILTERMODE_IDMASK;
+   FilterConfig11.FilterScale = CAN_FILTERSCALE_32BIT;
+   FilterConfig11.FilterActivation = ENABLE;
+
+   if(HAL_CAN_ConfigFilter(&hcan, &FilterConfig11)!=HAL_OK) {
+ 	  Error_Handler();
+ 	}
+
+   // we activate the notifications (interrupts) for FIFO0
+   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+	   Error_Handler();
+ 	}
+   // we activate the notifications (interrupts) for FIFO1
+   if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK) {
+	   Error_Handler();
+ 	}
+   // we activate the notifications (interrupts) for all error codes
+   if(HAL_CAN_ActivateNotification(&hcan, (CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE | CAN_IT_ERROR)) != HAL_OK) {
+	   Error_Handler();
+   }
+   // we start the CAN
+   if(HAL_CAN_Start(&hcan)!=HAL_OK) {
+ 	  Error_Handler();
+   }
+
   /* USER CODE END CAN_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 72-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -388,6 +458,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 7200-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 100-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
@@ -479,11 +594,22 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+	if(htim == &htim3) {	// Code Cycle interrupt
+		BCycleTimerFlag = 1;
+	}
+}
 
 
 /* USER CODE END 4 */
@@ -499,6 +625,8 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	  HAL_Delay(200);
+	  NVIC_SystemReset();
   }
   /* USER CODE END Error_Handler_Debug */
 }
