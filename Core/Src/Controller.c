@@ -9,7 +9,7 @@
 #include <Maps.h>
 
 // Local Structs
-InputStruct *MyInputs; // TODO: they need to go in app.h
+InputStruct *MyInputs;
 OutputStruct *MyOutputs;
 
 States NCurrentState, NPreviousState;
@@ -24,7 +24,7 @@ uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime,
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
 
-#define RaiseControlError(fault_) {do{ MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = (1 << (uint32_t)(fault_)); }while(0);}
+#define RaiseControlError(fault_) {do{ MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = fault_; }while(0);}
 #define ClearControlError(fault_) MyOutputs->NControlErrorStatus &= ~(1 << (uint32_t)(fault_))
 #define CheckControlError(fault_) (MyOutputs->NControlErrorStatus >> (uint32_t)(fault_)) & 0x1
 
@@ -41,8 +41,6 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 
 void Controller(InputStruct *inputs, OutputStruct *outputs){
 
-//	myInputs = inputs;   // TODO: previously here... we should not need to do the copy every time, they are pointers
-//	myOutputs = outputs;
 	tControllerTimmer = HAL_GetTick();
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -321,11 +319,15 @@ void SHIFTING_Entry(void) {
 		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
 		NShiftRequest = Up;
 		MyOutputs->BUpShiftPortState = 1;
+
+		//TODO: Check if NGearTarget == 1 & MyOutputs->BDnShiftPortState = 1; instead
+
 	}
 	else if(NPreviousState == PRE_DNSHIFT_STATE) {
 		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
 		NShiftRequest = Down;
 		MyOutputs->BDnShiftPortState = 1;
+		//TODO: Check if NGearTarget == 0 & MyOutputs->BUpShiftPortState = 1; instead
 	}
 	else {
 		NCurrentState = Unknown;
@@ -411,6 +413,7 @@ void ERROR_Entry(void) {
 	// TODO: evaluate if it is correct to stop all output actions here...maybe not
 	// clutch should always work... if we entere here during an actuation, not sure if it is correct to interrupt it
 }
+
 void ERROR_Exit(void) {
 
 }
@@ -431,10 +434,11 @@ void ERROR_Event(void) {
 }
 void ERROR_Run(void) {
 
-	// we save the last error
-	if(MyOutputs->NControlErrorStatus != 0) {
-		MyOutputs->NControlErrorStatusLogged = MyOutputs->NControlErrorStatus;
-	}
+	MyOutputs->NControlErrorStatus = 0;
+	// we save the last error			WE ALREADY DO IT IN MACRO
+//	if(MyOutputs->NControlErrorStatus != 0) {
+//		MyOutputs->NControlErrorStatusLogged = MyOutputs->NControlErrorStatus;
+//	}
 
 	// TODO: find a way to read the Control Errors and then reset them in order to clear them for the next cycle
 

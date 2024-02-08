@@ -119,7 +119,7 @@ typedef struct _InputStruct {
 	int8_t rClutchPaddleRawAnalog;			// Internal Clutch Paddle Analog Measurement (can be from -x% to 10x% to allow margin)
 	uint8_t BrClutchPaddleInError;			// 1 if Clutch Paddle is in error (both Analog and CAN)
 	int8_t rClutchPaddle;					// Steering wheel clutch paddle Clipped percentage
-	uint8_t NrClutchPaddleSource;			// can be CAN or Analog
+	SignalSource NrClutchPaddleSource;		// can be CAN or Analog
 
 	// ECU
 	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable

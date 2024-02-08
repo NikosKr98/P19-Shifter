@@ -233,6 +233,7 @@ void ReadInputs(InputStruct *inputs){
 		// nEngine Conditioning
 
 		// CAN Input
+
 		if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tCurrent) {
 			inputs->BnEngineInError = 1;
 			inputs->BnEngineReliable = 0;
@@ -336,16 +337,16 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 case STEERING_RX_ID :
 		 tCANSteeringWheelLastSeen = HAL_GetTick();
 
-		 BUpShiftButtonCANInError 		= RxBuffer[0] & 0x01;
-		 BDnShiftButtonCANInError 		= RxBuffer[0] & 0x02;
-		 BLaunchButtonCANInError 		= RxBuffer[0] & 0x04;
-		 BEmergencyButtonCANInError 	= RxBuffer[0] & 0x08;
-		 BrClutchPaddleRawInErrorCAN 	= RxBuffer[0] & 0x40;
+		 BUpShiftButtonCANInError 		= (RxBuffer[0] >> 0) & 0x01;
+		 BDnShiftButtonCANInError 		= (RxBuffer[0] >> 1) & 0x01;
+		 BLaunchButtonCANInError 		= (RxBuffer[0] >> 2) & 0x01;
+		 BEmergencyButtonCANInError 	= (RxBuffer[0] >> 3) & 0x01;
+		 BrClutchPaddleRawInErrorCAN 	= (RxBuffer[0] >> 6) & 0x01;
 
-		 BUpShiftButtonCAN 				= RxBuffer[1] & 0x01;
-		 BDnShiftButtonCAN 				= RxBuffer[1] & 0x02;
-		 BLaunchRequestCAN 				= RxBuffer[1] & 0x04;
-		 BEmergencyButtonCAN 			= RxBuffer[1] & 0x08;
+		 BUpShiftButtonCAN 				= (RxBuffer[1] >> 0) & 0x01;
+		 BDnShiftButtonCAN 				= (RxBuffer[1] >> 1) & 0x01;
+		 BLaunchRequestCAN 				= (RxBuffer[1] >> 2) & 0x01;
+		 BEmergencyButtonCAN 			= (RxBuffer[1] >> 3) & 0x01;
 
 		 rClutchPaddleRawCAN 			= RxBuffer[2];
 

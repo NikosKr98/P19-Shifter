@@ -74,19 +74,6 @@ typedef enum _AntistallState{
 
 typedef struct {
 
-	int8_t current_gear;
-	int8_t target_gear;
-	uint8_t up_port_state;
-	uint8_t down_port_state;
-	uint32_t shift_end_time;
-	uint8_t up_button_out;
-	uint8_t down_button_out;
-	uint8_t up_button_status;
-	uint8_t down_button_status;
-	uint16_t clutch_position;
-	uint32_t actual_gear;
-	uint8_t clutch_detection;
-
 	ControlError NControlErrorStatus;
 	ControlError NControlErrorStatusLogged;
 

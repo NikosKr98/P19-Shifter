@@ -51,54 +51,7 @@ void WriteOutputs(OutputStruct *output) {
 
 
 	// CAN
-
-
 }
-
-
-
-void shiftup_activation(OutputStruct *output){ // Shift up function
-	HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, GPIO_PIN_RESET);
-
-	output->up_port_state = 1;
-
-	shift_end_time = HAL_GetTick() + shifting_interval;
-}
-
-void shiftdown_activation(OutputStruct *output){ // Shift down function
-	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, GPIO_PIN_SET);
-
-	output->down_port_state = 1;
-
-	shift_end_time = HAL_GetTick() + shifting_interval;
-}
-
-void neutral_activation(OutputStruct *output){ //Neutral shift function
-	HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, GPIO_PIN_RESET);
-
-	output->up_port_state = 1;
-
-	shift_end_time = HAL_GetTick() + neutral_interval;
-}
-
-
-
-void end_of_shift(OutputStruct *output) {  //Shift Handling
-
-	// Check if a shift is in progress and if the delay has ended
-	if ((output->up_port_state || output->down_port_state) && HAL_GetTick() >= shift_end_time) {
-
-		// Reset the port action and update the current gear
-
-		HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, GPIO_PIN_RESET);
-
-		output-> current_gear = output->target_gear;
-		output->up_port_state = 0;
-		output->down_port_state=0;
-	}
-}
-
 
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {
 

@@ -124,7 +124,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
 //  HAL_TIM_Base_Start(&htim2);		// general timer for PWM use
 
-
+  HAL_GPIO_WritePin(VCC_GPIO_Port,VCC_Pin,GPIO_PIN_SET);
   InitInputs();
   InitController(&Inputs,&Outputs);
   InitOutputs();
