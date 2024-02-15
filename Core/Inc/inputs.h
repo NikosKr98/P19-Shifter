@@ -27,8 +27,8 @@
 #define CLUTCH_PADDLE_MIN					0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 					100		// max clutch paddle percentage
 
-#define ADC_BUFFER_SIZE 357*2						// is the size of the buffer, 2 halves of 306 samples
-#define ADC_BUFFER_HALF_SIZE ADC_BUFFER_SIZE/2		// we use it to do the division in compile time and not in run time
+#define ADC_BUFFER_SIZE 714							// is the size of the buffer, 2 times the samples needed for 1 cycle
+#define ADC_BUFFER_HALF_SIZE 357					// we use it to not do the division in run time
 
 extern uint16_t adcRawValue[ADC_BUFFER_SIZE];
 

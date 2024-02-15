@@ -1,3 +1,3 @@
-../Core/Src/outputs.c:27:6:InitOutputs	4	static
-../Core/Src/outputs.c:32:6:WriteOutputs	16	static
-../Core/Src/outputs.c:56:6:CAN_TX	56	static
+../Core/Src/Outputs.c:27:6:InitOutputs	4	static
+../Core/Src/Outputs.c:32:6:WriteOutputs	16	static
+../Core/Src/Outputs.c:56:6:CAN_TX	56	static

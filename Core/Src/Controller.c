@@ -318,16 +318,26 @@ void SHIFTING_Entry(void) {
 	if(NPreviousState == PRE_UPSHIFT_STATE) {
 		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
 		NShiftRequest = Up;
-		MyOutputs->BUpShiftPortState = 1;
 
-		//TODO: Check if NGearTarget == 1 & MyOutputs->BDnShiftPortState = 1; instead
+		if(MyOutputs->NGearTarget == 1) {		// if going from neutral to 1st we need to actually downshift (it is how the gears work)
+			MyOutputs->BDnShiftPortState = 1;
+		}
+		else {									// all other upshifts are normal
+			MyOutputs->BUpShiftPortState = 1;
+		}
 
 	}
 	else if(NPreviousState == PRE_DNSHIFT_STATE) {
 		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
 		NShiftRequest = Down;
-		MyOutputs->BDnShiftPortState = 1;
-		//TODO: Check if NGearTarget == 0 & MyOutputs->BUpShiftPortState = 1; instead
+
+		if(MyOutputs->NGearTarget == 0) {		// if going from 1st to neutral we need to actually upshift (it is how the gears work)
+			MyOutputs->BUpShiftPortState = 1;
+		}
+		else {									// all other downshifts are normal
+			MyOutputs->BDnShiftPortState = 1;
+		}
+
 	}
 	else {
 		NCurrentState = Unknown;
@@ -378,7 +388,7 @@ void POSTSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = POSTSHIFT_STATE;
 
-	// stop all actuation
+	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
 

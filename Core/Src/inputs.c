@@ -68,6 +68,7 @@ void ReadInputs(InputStruct *inputs){
 
 		// voltage conversion
 		inputs->VNGearRaw = (float)(NGearRawADCFiltered * 3.3 / 4095.0);
+		// TODO: 3.3V should be passed as a generic variable. Check the internal variables for the one you need. Do not put 3.3 by hand
 
 		// mapping
 		inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGearRaw, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
