@@ -40,267 +40,306 @@ int8_t rClutchPaddleRaw;
 
 // private functions declaration
 uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw);
-uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side);
+uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side, uint8_t offset);
 
 void ReadInputs(InputStruct *inputs){
 
 	// Reset events
-	    inputs->nEventStatus = 0;
+	inputs->nEventStatus = 0;
 
-	    tCurrent = HAL_GetTick();
-
-	    // TODO: we need to think the order of execution of the inputs (now they are a bit random)
-	    // check if there are dependencies
-
-	    // TODO: think about putting the analog read (buckup) buttons inside the CAN error state to gain some time during normal running
-	    // or, do them at the same time and compare inputs
+    tCurrent = HAL_GetTick();
 
 	// ---------------------------------------------------------------------------------------------------
-		// Driver Kill
+	//Analog Inputs
 
-		//	TODO: inputs->BDriverKill = digital read... (debouncing)
+	//ADC Averaging
+	inputs->NADCChannel01Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 0);
+	inputs->NADCChannel02Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 1);
+	inputs->NADCChannel03Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 2);
+	inputs->NADCChannel04Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 3);
+	inputs->NADCChannel05Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 4);
+	inputs->NADCChannel06Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 5);
+	inputs->NADCChannel07Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 6);
+	inputs->NADCChannel08Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 7);
 
-	// ---------------------------------------------------------------------------------------------------
-	    // NGear Conditioning
-
-		// ADC averaging
-		NGearRawADCFiltered = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide);
-
-		// voltage conversion
-		inputs->VNGearRaw = (float)(NGearRawADCFiltered * 3.3 / 4095.0);
-		// TODO: 3.3V should be passed as a generic variable. Check the internal variables for the one you need. Do not put 3.3 by hand
-
-		// mapping
-		inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGearRaw, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
-
-		// TODO: think about checking the float NGear for +-0.2 to define false neutral
-
-		// conditioning (round float to nearest integer)
-		inputs->NGear = (uint8_t)round(inputs->NGearRaw);
-
-		// CLAMPING
-		inputs->NGear = CLAMP(inputs->NGear, 0, MAX_GEAR);
-
-		// check for errors
-		if(inputs->BNGearInError) {
-			RaiseFault(inputs, NGEAR_FAULT);
-			// inputs->NGear = 1; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
-		}
-		else ClearFault(inputs, NGEAR_FAULT);
-
-	// ---------------------------------------------------------------------------------------------------
-		// Steering Wheel Fitted Check
-
-		if((tCANSteeringWheelLastSeen + STEERING_WHEEL_FITTED_INTERVAL) < tCurrent) {
-			inputs->BSteeringWheelFitted = 0;
-			RaiseFault(inputs, STEERING_WHEEL_FAULT);
-		}
-		else {
-			inputs->BSteeringWheelFitted = 1;
-			ClearFault(inputs, STEERING_WHEEL_FAULT);
-		}
-
-	// ---------------------------------------------------------------------------------------------------
-		// Emergency Button Conditioning
-
-		// CAN Input
-		inputs->BEmergencyButtonCANInError = BEmergencyButtonCANInError;
-		inputs->BEmergencyButtonCAN = BEmergencyButtonCAN;
-
-		// Analog Input
-				// TODO: digital read with debounce
-				// do the window up and down checks and define if in the correct range
-				// define if in error
-
-
-		// Emergency Input Strategy
-		if(inputs->BSteeringWheelFitted && !inputs->BEmergencyButtonCANInError) {
-			inputs->BEmergencyRequest = inputs->BEmergencyButtonCAN;
-			inputs->NBEmergencyRequestSource = CAN;
-			inputs->BEmergencyRequestInError = 0;
-		}
-		else if(!inputs->BEmergencyButtonAnalogInError) {
-			inputs->BEmergencyRequest = inputs->BEmergencyButtonAnalog;
-			inputs->NBEmergencyRequestSource = Analog;
-			inputs->BEmergencyRequestInError = 0;
-		}
-		else {
-			inputs->BEmergencyRequestInError = 1;
-			inputs->BEmergencyRequest = 0;		// we force to zero if in error
-		}
-
-	// ---------------------------------------------------------------------------------------------------
-		// Clutch Paddle Conditioning
-
-		// CAN Input
-		inputs->BrClutchPaddleRawCANInError = BrClutchPaddleRawInErrorCAN;
-		inputs->rClutchPaddleRawCAN = rClutchPaddleRawCAN;
-
-		// Analog Input
-		// TODO: analog read, convert to voltage and map to -x% 10x%
-
-		// Clutch Paddle Input Strategy
-		if(inputs->BSteeringWheelFitted && !inputs->BrClutchPaddleRawCANInError) {
-			rClutchPaddleRaw = inputs->rClutchPaddleRawCAN;
-			inputs->NrClutchPaddleSource = CAN;
-			inputs->BrClutchPaddleInError = 0;
-
-		}
-		else if(!inputs->BrClutchPaddleRawAnalogInError) {
-			rClutchPaddleRaw = inputs->rClutchPaddleRawAnalog;
-			inputs->NrClutchPaddleSource = Analog;
-			inputs->BrClutchPaddleInError = 0;
-		}
-		else {
-			inputs->BrClutchPaddleInError = 1;
-			rClutchPaddleRaw = (inputs->BEmergencyRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
-		}
-
-		// CLAMPING
-		inputs->rClutchPaddle = CLAMP(rClutchPaddleRaw, CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
+	//Voltage Conversion
+	inputs->VSHIFTERAnalog01 = (float)(inputs->NADCChannel01Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog02 = (float)(inputs->NADCChannel02Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog03 = (float)(inputs->NADCChannel03Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog04 = (float)(inputs->NADCChannel04Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog05 = (float)(inputs->NADCChannel05Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog06 = (float)(inputs->NADCChannel06Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog07 = (float)(inputs->NADCChannel07Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog08 = (float)(inputs->NADCChannel08Raw * 3.3 / 4095.0);
 
 
 	// ---------------------------------------------------------------------------------------------------
-		// Up-Dn Shift Conditioning
-
-		// CAN Input
-		inputs->BUpShiftButtonCANInError = BUpShiftButtonCANInError;
-		inputs->BDnShiftButtonCANInError = BDnShiftButtonCANInError;
-		inputs->BUpShiftButtonCAN = BUpShiftButtonCAN;
-		inputs->BDnShiftButtonCAN = BDnShiftButtonCAN;
-
-		// Analog Input
-				// TODO: analog read from double voltage divider, convert to voltage
-				// do the window up and down checks and define if in the correct range
-				// define if in error
 
 
-		// UpShift Input Strategy
-		if(inputs->BSteeringWheelFitted && !inputs->BUpShiftButtonCANInError) {
-			inputs->BUpShiftRequest = inputs->BUpShiftButtonCAN;
-			inputs->NBUpshiftRequestSource = CAN;
-			inputs->BUpShiftRequestInError = 0;
-		}
-		else if(!inputs->BUpDnShiftButtonAnalogInError) {
-			inputs->BUpShiftRequest = (inputs->NBUpDnShiftButtonAnalog == 1 ? 1 : 0);
-			inputs->NBUpshiftRequestSource = Analog;
-			inputs->BUpShiftRequestInError = 0;
-		}
-		else {
-			inputs->BUpShiftRequestInError = 1;
-			inputs->BUpShiftRequest = 0;		// we force to zero if in error
-		}
 
-		// DnShift Input Strategy
-		if(inputs->BSteeringWheelFitted && !inputs->BDnShiftButtonCANInError) {
-			inputs->BDnShiftRequest = inputs->BDnShiftButtonCAN;
-			inputs->NBDnshiftRequestSource = CAN;
-			inputs->BDnShiftRequestInError = 0;
-		}
-		else if(!inputs->BUpDnShiftButtonAnalogInError) {
-			inputs->BDnShiftRequest = (inputs->NBUpDnShiftButtonAnalog == 2 ? 1 : 0);
-			inputs->NBDnshiftRequestSource = Analog;
-			inputs->BDnShiftRequestInError = 0;
-		}
-		else {
-			inputs->BDnShiftRequestInError = 1;
-			inputs->BDnShiftRequest = 0;		// we force to zero if in error
-		}
+	// TODO: we need to think the order of execution of the inputs (now they are a bit random)
+	// check if there are dependencies
+
+	// TODO: think about putting the analog read (buckup) buttons inside the CAN error state to gain some time during normal running
+	// or, do them at the same time and compare inputs
 
 	// ---------------------------------------------------------------------------------------------------
-		// Launch Button Conditioning
+	// Driver Kill
 
-		inputs->BLaunchButtonCANInError = BLaunchButtonCANInError;
-		inputs->BLaunchButtonCAN = BLaunchRequestCAN;
-
-		// Launch Input Strategy
-		if(inputs->BSteeringWheelFitted && !inputs->BLaunchButtonCANInError) {
-			inputs->BLaunchRequest = inputs->BLaunchButtonCAN;
-			inputs->BLaunchRequestInError = 0;
-		}
-		else {
-			inputs->BLaunchRequestInError = 1;
-			inputs->BLaunchRequest = 0;		// we force to zero if in error
-		}
+	//	TODO: inputs->BDriverKill = digital read... (debouncing)
 
 	// ---------------------------------------------------------------------------------------------------
-		// PCB Supply Voltage Conditioning
+	// NGear Conditioning
 
-		//	inputs->VSupply = (float)ADC_VALUE * 3.3 / 4095.0 * (Voltage divider gain <- TBD as #define)
-		// TODO: set the analog inputs and decide filtering (or not)
+	// Analog Input
+	inputs->VNGear = inputs->VSHIFTERAnalog04;
+
+	// mapping
+	inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGear, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
+
+	// TODO: think about checking the float NGear for +-0.2 to define false neutral
+
+	// conditioning (round float to nearest integer)
+	inputs->NGear = (uint8_t)round(inputs->NGearRaw);
+
+	// CLAMPING
+	inputs->NGear = CLAMP(inputs->NGear, 0, MAX_GEAR);
+
+	// check for errors
+	if(inputs->BNGearInError) {
+		RaiseFault(inputs, NGEAR_FAULT);
+		// inputs->NGear = 1; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
+	}
+	else ClearFault(inputs, NGEAR_FAULT);
+
+	// ---------------------------------------------------------------------------------------------------
+	// Steering Wheel Fitted Check
+
+	if((tCANSteeringWheelLastSeen + STEERING_WHEEL_FITTED_INTERVAL) < tCurrent) {
+		inputs->BSteeringWheelFitted = 0;
+		RaiseFault(inputs, STEERING_WHEEL_FAULT);
+	}
+	else {
+		inputs->BSteeringWheelFitted = 1;
+		ClearFault(inputs, STEERING_WHEEL_FAULT);
+	}
+
+	// ---------------------------------------------------------------------------------------------------
+	// Clutch Paddle Conditioning
+
+	// CAN Input
+	inputs->BrClutchPaddleRawCANInError = BrClutchPaddleRawInErrorCAN;
+	inputs->rClutchPaddleRawCAN = rClutchPaddleRawCAN;
+
+	// Analog Input
+	// TODO: analog read, convert to voltage and map to -x% 10x%
+	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog01;
+
+	// mapping
+
+	// check for out of bounds and set in error
+
+	// Clutch Paddle Input Strategy
+	if(inputs->BSteeringWheelFitted && !inputs->BrClutchPaddleRawCANInError) {
+		rClutchPaddleRaw = inputs->rClutchPaddleRawCAN;
+		inputs->NrClutchPaddleSource = CAN;
+		inputs->BrClutchPaddleInError = 0;
+
+	}
+	else if(!inputs->BrClutchPaddleRawAnalogInError) {
+		rClutchPaddleRaw = inputs->rClutchPaddleRawAnalog;
+		inputs->NrClutchPaddleSource = Analog;
+		inputs->BrClutchPaddleInError = 0;
+	}
+	else {
+		inputs->BrClutchPaddleInError = 1;
+		rClutchPaddleRaw = (inputs->BEmergencyRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
+	}
+
+	// CLAMPING
+	inputs->rClutchPaddle = CLAMP(rClutchPaddleRaw, CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
 
 
 	// ---------------------------------------------------------------------------------------------------
-		// nEngine Conditioning
+	// Up-Dn Shift Conditioning
 
-		// CAN Input
+	// CAN Input
+	inputs->BUpShiftButtonCANInError = BUpShiftButtonCANInError;
+	inputs->BDnShiftButtonCANInError = BDnShiftButtonCANInError;
+	inputs->BUpShiftButtonCAN = BUpShiftButtonCAN;
+	inputs->BDnShiftButtonCAN = BDnShiftButtonCAN;
 
-		if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tCurrent) {
-			inputs->BnEngineInError = 1;
-			inputs->BnEngineReliable = 0;
-			inputs->nEngine = 0; 		// we force to zero if in error
+	// Analog Input
+	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog02;
+
+	// Level checking
+
+	if(inputs->NBUpDnShiftButtonAnalog >= VUPDN_NOPRESS) {
+		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->BUpDnShiftButtonAnalogInError = 0;
+	}
+	else if(inputs->VUpDnButtonAnalog <= VUPDN_UPSHIFT_MAX && inputs->VUpDnButtonAnalog >= VUPDN_UPSHIFT_MIN) {
+		inputs->NBUpDnShiftButtonAnalog = 1;
+		inputs->BUpDnShiftButtonAnalogInError = 0;
+	}
+	else if(inputs->VUpDnButtonAnalog <= VUPDN_DNSHIFT_MAX && inputs->VUpDnButtonAnalog >= VUPDN_DNSHIFT_MIN) {
+		inputs->NBUpDnShiftButtonAnalog = 2;
+		inputs->BUpDnShiftButtonAnalogInError = 0;
+	}
+	else if(inputs->VUpDnButtonAnalog <= VUPDN_BOTHPRESSED_MAX && inputs->VUpDnButtonAnalog >= VUPDN_BOTHPRESSED_MIN) {
+		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->BUpDnShiftButtonAnalogInError = 0;
+	}
+	else {
+		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->BUpDnShiftButtonAnalogInError = 1;
+	}
+
+
+	// UpShift Input Strategy
+	if(inputs->BSteeringWheelFitted && !inputs->BUpShiftButtonCANInError) {
+		inputs->BUpShiftRequest = inputs->BUpShiftButtonCAN;
+		inputs->NBUpshiftRequestSource = CAN;
+		inputs->BUpShiftRequestInError = 0;
+	}
+	else if(!inputs->BUpDnShiftButtonAnalogInError) {
+		inputs->BUpShiftRequest = (inputs->NBUpDnShiftButtonAnalog == 1 ? 1 : 0);
+		inputs->NBUpshiftRequestSource = Analog;
+		inputs->BUpShiftRequestInError = 0;
+	}
+	else {
+		inputs->BUpShiftRequestInError = 1;
+		inputs->BUpShiftRequest = 0;		// we force to zero if in error
+	}
+
+	// DnShift Input Strategy
+	if(inputs->BSteeringWheelFitted && !inputs->BDnShiftButtonCANInError) {
+		inputs->BDnShiftRequest = inputs->BDnShiftButtonCAN;
+		inputs->NBDnshiftRequestSource = CAN;
+		inputs->BDnShiftRequestInError = 0;
+	}
+	else if(!inputs->BUpDnShiftButtonAnalogInError) {
+		inputs->BDnShiftRequest = (inputs->NBUpDnShiftButtonAnalog == 2 ? 1 : 0);
+		inputs->NBDnshiftRequestSource = Analog;
+		inputs->BDnShiftRequestInError = 0;
+	}
+	else {
+		inputs->BDnShiftRequestInError = 1;
+		inputs->BDnShiftRequest = 0;		// we force to zero if in error
+	}
+
+	// ---------------------------------------------------------------------------------------------------
+	// Emergency Button Conditioning
+
+	// CAN Input
+	inputs->BEmergencyButtonCANInError = BEmergencyButtonCANInError;
+	inputs->BEmergencyButtonCAN = BEmergencyButtonCAN;
+
+	// Emergency Input Strategy
+	if(inputs->BSteeringWheelFitted && !inputs->BEmergencyButtonCANInError) {
+		inputs->BEmergencyRequest = inputs->BEmergencyButtonCAN;
+		inputs->BEmergencyRequestInError = 0;
+	}
+	else {
+		inputs->BEmergencyRequestInError = 1;
+		inputs->BEmergencyRequest = 0;		// we force to zero if in error
+	}
+
+	// ---------------------------------------------------------------------------------------------------
+	// Launch Button Conditioning
+
+	inputs->BLaunchButtonCANInError = BLaunchButtonCANInError;
+	inputs->BLaunchButtonCAN = BLaunchRequestCAN;
+
+	// Launch Input Strategy
+	if(inputs->BSteeringWheelFitted && !inputs->BLaunchButtonCANInError) {
+		inputs->BLaunchRequest = inputs->BLaunchButtonCAN;
+		inputs->BLaunchRequestInError = 0;
+	}
+	else {
+		inputs->BLaunchRequestInError = 1;
+		inputs->BLaunchRequest = 0;		// we force to zero if in error
+	}
+
+	// ---------------------------------------------------------------------------------------------------
+	// PCB Supply Voltage Conditioning
+
+	inputs->VSupply = inputs->VSHIFTERAnalog06 * VSUPPLY_DIVIDER_GAIN;
+
+
+	// ---------------------------------------------------------------------------------------------------
+	// nEngine Conditioning
+
+	// CAN Input
+
+	if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tCurrent) {
+		inputs->BnEngineInError = 1;
+		inputs->BnEngineReliable = 0;
+		inputs->nEngine = 0; 		// we force to zero if in error
 //			RaiseFault(inputs, ECU_COMMS_FAULT); // TODO: we temporarily comment if for testing without the ECU
-		}
-		else {
-			inputs->BnEngineInError = 0;
-			inputs->BnEngineReliable = 1;
-			ClearFault(inputs, ECU_COMMS_FAULT);
-		}
+	}
+	else {
+		inputs->BnEngineInError = 0;
+		inputs->BnEngineReliable = 1;
+		ClearFault(inputs, ECU_COMMS_FAULT);
+	}
 
-		inputs->nEngine = nEngineRawCAN; // TODO: conversion??
-		// TODO: we have both in error and reliable. In the controller we will consider reliable as the strategy
-		// think about doing extra checks apart from CANRx timing
+	inputs->nEngine = nEngineRawCAN; // TODO: conversion??
+	// TODO: we have both in error and reliable. In the controller we will consider reliable as the strategy
+	// think about doing extra checks apart from CANRx timing
 
 
-		if(inputs->BnEngineInError) {
-			inputs->nEngine = 0; 		// we force to zero if in error
-		}
-
-	// ---------------------------------------------------------------------------------------------------
-		// CAN Diagnostics
-		inputs->NCANErrors = NCANErrorCount;			// update can error count
-		inputs->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
+	if(inputs->BnEngineInError) {
+		inputs->nEngine = 0; 		// we force to zero if in error
+	}
 
 	// ---------------------------------------------------------------------------------------------------
-		// EVENTS
+	// CAN Diagnostics
+	inputs->NCANErrors = NCANErrorCount;			// update can error count
+	inputs->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
 
-		if(!inputs->BUpShiftRequestInError && inputs->BUpShiftRequest && !BUpShiftRequested) {
-			BUpShiftRequested = 1;
-			PushEvent(inputs, UPSHIFT_PRESS_EVT);
-		}
-		else if(!inputs->BUpShiftRequestInError && !inputs->BUpShiftRequest && BUpShiftRequested) {
-			BUpShiftRequested = 0;
-			PushEvent(inputs, UPSHIFT_RELEASE_EVT);
-		}
+	// ---------------------------------------------------------------------------------------------------
+	// EVENTS
 
-		if(!inputs->BDnShiftRequestInError && inputs->BDnShiftRequest && !BDnShiftRequested) {
-			BDnShiftRequested = 1;
-			PushEvent(inputs, DNSHIFT_PRESS_EVT);
-		}
-		else if(!inputs->BDnShiftRequestInError && !inputs->BDnShiftRequest && BDnShiftRequested) {
-			BDnShiftRequested = 0;
-			PushEvent(inputs, DNSHIFT_RELEASE_EVT);
-		}
+	if(!inputs->BUpShiftRequestInError && inputs->BUpShiftRequest && !BUpShiftRequested) {
+		BUpShiftRequested = 1;
+		PushEvent(inputs, UPSHIFT_PRESS_EVT);
+	}
+	else if(!inputs->BUpShiftRequestInError && !inputs->BUpShiftRequest && BUpShiftRequested) {
+		BUpShiftRequested = 0;
+		PushEvent(inputs, UPSHIFT_RELEASE_EVT);
+	}
 
-		if(!inputs->BLaunchRequestInError && inputs->BLaunchRequest && !BLaunchRequested) {
-			BLaunchRequested = 1;
-			PushEvent(inputs, LAUNCH_PRESS_EVT);
-		}
-		else if(!inputs->BLaunchRequestInError && !inputs->BLaunchRequest && BLaunchRequested) {
-			BLaunchRequested = 0;
-			PushEvent(inputs, LAUNCH_RELEASE_EVT);
-		}
+	if(!inputs->BDnShiftRequestInError && inputs->BDnShiftRequest && !BDnShiftRequested) {
+		BDnShiftRequested = 1;
+		PushEvent(inputs, DNSHIFT_PRESS_EVT);
+	}
+	else if(!inputs->BDnShiftRequestInError && !inputs->BDnShiftRequest && BDnShiftRequested) {
+		BDnShiftRequested = 0;
+		PushEvent(inputs, DNSHIFT_RELEASE_EVT);
+	}
 
-		if(!inputs->BEmergencyRequestInError && inputs->BEmergencyRequest && !BEmergencyRequested) {
-			BEmergencyRequested = 1;
-			PushEvent(inputs, EMERGENCY_PRESS_EVT);
-		}
-		else if(!inputs->BEmergencyRequestInError && !inputs->BEmergencyRequest && BEmergencyRequested) {
-			BEmergencyRequested = 0;
-			PushEvent(inputs, EMERGENCY_RELEASE_EVT);
-		}
+	if(!inputs->BLaunchRequestInError && inputs->BLaunchRequest && !BLaunchRequested) {
+		BLaunchRequested = 1;
+		PushEvent(inputs, LAUNCH_PRESS_EVT);
+	}
+	else if(!inputs->BLaunchRequestInError && !inputs->BLaunchRequest && BLaunchRequested) {
+		BLaunchRequested = 0;
+		PushEvent(inputs, LAUNCH_RELEASE_EVT);
+	}
 
-		// TODO: the release gets triggered always, so think of a better way to create only 1 event, or eliminate it completely
+	if(!inputs->BEmergencyRequestInError && inputs->BEmergencyRequest && !BEmergencyRequested) {
+		BEmergencyRequested = 1;
+		PushEvent(inputs, EMERGENCY_PRESS_EVT);
+	}
+	else if(!inputs->BEmergencyRequestInError && !inputs->BEmergencyRequest && BEmergencyRequested) {
+		BEmergencyRequested = 0;
+		PushEvent(inputs, EMERGENCY_RELEASE_EVT);
+	}
+
+	// TODO: the release gets triggered always, so think of a better way to create only 1 event, or eliminate it completely
+		// we could create 2 more variables and monitor the transitions only from pressed to release and vice versa
+	// most likely it is not needed as an event because we are always checking the precise percentage in the controller code
 //		if(!inputs->BrClutchPaddleInError && (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD)) {
 //			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
 //		}
@@ -313,7 +352,8 @@ void ReadInputs(InputStruct *inputs){
 
 }
 
-void InitInputs(void){
+void InitInputs(void) {
+	HAL_ADCEx_Calibration_Start(&hadc1);
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
 }
 
@@ -335,7 +375,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 //Don't forget to add and enable filters for each message
 	switch(RxHeader.StdId) {
 
-	 case STEERING_RX_ID :
+	 case SIU_RX_ID :
 		 tCANSteeringWheelLastSeen = HAL_GetTick();
 
 		 BUpShiftButtonCANInError 		= (RxBuffer[0] >> 0) & 0x01;
@@ -376,16 +416,17 @@ uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw) {
 }
 
 
-uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side) {
+uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side, uint8_t offset) {
 
-	uint32_t Accumulator=0;
-	uint16_t Offset = (side == 1 ? halfsize : 0);
+	uint32_t Accumulator = 0;
+	uint16_t SideOffset = (side == 1 ? halfsize : 0);
+	uint16_t maxArrayIndex = halfsize / ADC_NUMBER_OF_CHANNELS;
 
-	for(uint16_t i=0; i<halfsize; i++) {
-		Accumulator += buffer[i + Offset];
+ 	for(uint16_t i=0; i< maxArrayIndex; i++) {
+		Accumulator += buffer[(i * ADC_NUMBER_OF_CHANNELS) + offset + SideOffset];
 	}
 
-	Accumulator /= halfsize;
+	Accumulator /= maxArrayIndex;
 	return (uint16_t)Accumulator;
 
 }
