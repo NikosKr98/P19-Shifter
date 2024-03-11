@@ -11,7 +11,7 @@
 #include <Utils.h>
 
 // ANALOGS
-#define ADC_BUFFER_SIZE 						1072*2	// is the size of the buffer, 2 times the samples needed for 1 cycle
+#define ADC_BUFFER_SIZE 						2192*2	// is the size of the buffer, 2 times the samples needed for 1 cycle
 #define ADC_BUFFER_HALF_SIZE 					ADC_BUFFER_SIZE/2 // we use it to not do the division in run time
 #define ADC_NUMBER_OF_CHANNELS					8
 

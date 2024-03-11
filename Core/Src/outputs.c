@@ -41,7 +41,8 @@ void WriteOutputs(OutputStruct *output) {
 	// Do a clipping on the xClutchTarget to make sure we do not exceed the servo min and max values
 	// put the target directly in the timer period function
 	// The output for the clutch servo is a +5V pulse 50% dutycycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
-//	xClutchTargetOut = CLAMP(output->xClutchTarget, )
+	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
+
 
 	// Shifting Ports
 	// remember: Upshift: activated when writing 0 and not activating when writing 1
