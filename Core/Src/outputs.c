@@ -14,6 +14,16 @@ uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
 // CLUTCH
 uint16_t xClutchTargetOut;
 
+
+// PWM
+// Timer Parameters
+#define TIMER_COUTER_PERIOD 1000
+#define TIMER_PULSE TIMER_COUTER_PERIOD/2
+
+#define TIMER_MIN_PRESCALER 17
+#define TIMER_MAX_PRESCALER 1000
+uint32_t nTimerPrescaler;
+
 uint8_t TxData[8];
 
 // private function declarations
@@ -42,6 +52,12 @@ void WriteOutputs(OutputStruct *output) {
 	// put the target directly in the timer period function
 	// The output for the clutch servo is a +5V pulse 50% dutycycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
+
+
+	// update the Timer Registers, using the TIM_Exported_Macros
+//	__HAL_TIM_SET_PRESCALER(&htim1, nTimerPrescaler - 1);
+	__HAL_TIM_SET_AUTORELOAD(&htim1, xClutchTargetOut -1 );
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, xClutchTargetOut/2);
 
 
 	// Shifting Ports
