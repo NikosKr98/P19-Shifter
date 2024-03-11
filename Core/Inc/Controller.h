@@ -24,15 +24,18 @@
 #define ANTISTALL_TRIGGER_TIME				1000	// antistall ms timeout for triggering
 #define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
+
 // TIMING
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
 #define PRE_DNSHIFT_THRESHOLD_TIME			300		// the time we keep trying to accept an downshift request before we deny it
 
 // CLUTCH
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
-#define CLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
-#define CLUTCH_REST_POSITION				1100	// the clutch position when not actuated
-#define CLUTCH_MAX_OPENING					1900	// max opening for clutch
+
+#define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
+#define xCLUTCH_REST_POSITION				1500	// the clutch position when not actuated
+#define xCLUTCH_ABSOLUTE_MIN				1100	// min clutch position value
+#define xCLUTCH_ABSOLUTE_MAX				1900	// max clutch position value
 
 
 
@@ -83,7 +86,7 @@ typedef struct {
 
 	// CLUTCH
 	uint16_t xClutchTargetProtection;		// the clutch target opening requested from the protection/antistall strategy
-	float xClutchTargetManual;			// the clutch target opening requested from the clutch pad
+	float xClutchTargetManual;				// the clutch target opening requested from the clutch pad
 	uint16_t xClutchTargetShift;			// the clutch target opening requested from the shift control
 	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated

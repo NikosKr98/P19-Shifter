@@ -11,6 +11,7 @@
 #include <Controller.h>
 #include <Utils.h>
 
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern CAN_HandleTypeDef hcan;
 
@@ -21,7 +22,11 @@ extern CAN_HandleTypeDef hcan;
 
 #define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
 
-
+// DIGITAL OUT
+	// DO01: CLUTCH PWM
+	// DO02: VALVE2 (DOWN)
+	// DO03: VALVE1 (UP)
+	// DO04: ECU (SPACK CUT)
 
 void InitOutputs(void);
 void WriteOutputs(OutputStruct *output);

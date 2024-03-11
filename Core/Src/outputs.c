@@ -11,9 +11,9 @@
 uint32_t nCanTxErrorCount=0;
 uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
 
+// CLUTCH
+uint16_t xClutchTargetOut;
 
-//  private variables
-uint32_t msg_interval, msg_previous, button_previous, button_interval, msg_interval,shift_end_time;
 uint8_t TxData[8];
 
 // private function declarations
@@ -27,26 +27,29 @@ void end_of_shift(OutputStruct *output);
 void InitOutputs(void) {
 
 	// TODO: start the timer with initial target (CLUTCH_REST_POSITION) the released value (make the #define and also use it in the maps??)
+
+	// set the duty cycle to 0 before enabling the PWM in order to avoid unwanted movement
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, 0);
+	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 }
 
 void WriteOutputs(OutputStruct *output) {
 
 	// CLUTCH
 
+
 	// Do a clipping on the xClutchTarget to make sure we do not exceed the servo min and max values
 	// put the target directly in the timer period function
 	// The output for the clutch servo is a +5V pulse 50% dutycycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
-
-
+//	xClutchTargetOut = CLAMP(output->xClutchTarget, )
 
 	// Shifting Ports
 	// remember: Upshift: activated when writing 0 and not activating when writing 1
 	//			 Dnshift: activated when writing 1 and not activating when writing 0
 
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
-	// TODO: remember that the inverted sign is only for testing with the old cooling PCBs
-	HAL_GPIO_WritePin(GPIOA, UP_PORT_Pin, !output->BUpShiftPortState);
-	HAL_GPIO_WritePin(GPIOA, DOWN_PORT_Pin, output->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BUpShiftPortState);
+	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BDnShiftPortState);
 
 
 

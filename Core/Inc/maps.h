@@ -13,19 +13,12 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
-#define CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
+#define CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
 
 #define CLUTCH_PADDLE_MAP_SIZE	2
 
 #define CLUTCH_PADDLE_MAP_MAX		104
 #define CLUTCH_PADDLE_MAP_MIN		-4
-
-//    {3600, 3750},  // Gear 0
-//    {3900, 4000},  // Gear 1
-//    {3200, 3300},  // Gear 2
-//    {2250, 2400},  // Gear 3
-//    {1300, 1500},  // Gear 4
-//    {400, 600}     // Gear 5
 
 
 static const float NGearMap[2][TOTAL_GEARS] = {
@@ -36,7 +29,7 @@ static const float NGearMap[2][TOTAL_GEARS] = {
 };
 
 
-static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS] = {
+static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = {
 
 	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,   100},
 	/* Out: xClutchTarget */		{1500, 1575, 1650, 1725, 1800, 1816, 1832, 1848, 1864, 1880, 1900}

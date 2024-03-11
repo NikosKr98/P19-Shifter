@@ -13,14 +13,7 @@
 // ANALOGS
 #define ADC_BUFFER_SIZE 						1072*2	// is the size of the buffer, 2 times the samples needed for 1 cycle
 #define ADC_BUFFER_HALF_SIZE 					ADC_BUFFER_SIZE/2 // we use it to not do the division in run time
-#define ADC_NUMBER_OF_CHANNELS					6
-
-									// TODO: we will eventually have 8 analog channels
-// DIGITAL OUT
-	// DO01: CLUTCH PWM
-	// DO02: VALVE2 (DOWN)
-	// DO03: VALVE1 (UP)
-	// DO04: ECU (SPACK CUT)
+#define ADC_NUMBER_OF_CHANNELS					8
 
 #define VSUPPLY_DIVIDER_GAIN					0.23077f
 

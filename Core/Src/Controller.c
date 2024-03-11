@@ -60,7 +60,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 						MyOutputs->NAntistallState = Active;
-						MyOutputs->xClutchTargetProtection = CLUTCH_MAX_OPENING;
+						MyOutputs->xClutchTargetProtection = xCLUTCH_ABSOLUTE_MAX;
 					}
 				}
 
@@ -87,7 +87,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// Manual target mapping
 		if(!MyInputs->BrClutchPaddleInError) {
-			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
+			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
 			// TODO: terminate potential array timed control that runs below
 		}
 		else {
