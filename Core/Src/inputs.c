@@ -14,7 +14,7 @@
 #define ClearFault(ins_, fault_) ins_->nFaultStatus &= ~(1 << (uint32_t)(fault_))
 
 // Timing variables
-uint32_t tCurrent;
+uint32_t tInputsTimmer;
 
 // I/O Flags
 uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BEmergencyRequested=0;
@@ -47,7 +47,7 @@ void ReadInputs(InputStruct *inputs){
 	// Reset events
 	inputs->nEventStatus = 0;
 
-    tCurrent = HAL_GetTick();
+    tInputsTimmer = HAL_GetTick();
 
 	// ---------------------------------------------------------------------------------------------------
 	//Analog Inputs
@@ -57,10 +57,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->NADCChannel02Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 1);
 	inputs->NADCChannel03Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 2);
 	inputs->NADCChannel04Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 3);
-	inputs->NADCChannel06Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 4);
 	inputs->NADCChannel05Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 5);
-	inputs->NADCChannel08Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 6);
+	inputs->NADCChannel06Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 4);
 	inputs->NADCChannel07Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 7);
+	inputs->NADCChannel08Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 6);
 
 	//Voltage Conversion
 	inputs->VSHIFTERAnalog01 = (float)(inputs->NADCChannel01Raw * 3.3 / 4095.0);
@@ -73,9 +73,17 @@ void ReadInputs(InputStruct *inputs){
 	inputs->VSHIFTERAnalog08 = (float)(inputs->NADCChannel08Raw * 3.3 / 4095.0);
 
 
+	//Digital Inputs
+	if(inputs->tDigitalInputs < tInputsTimmer) {
+		inputs->NDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
+		inputs->NDIN02 = HAL_GPIO_ReadPin(DIN02_GPIO_Port, DIN02_Pin);
+		inputs->NDIN03 = HAL_GPIO_ReadPin(DIN03_GPIO_Port, DIN03_Pin);
+		inputs->NDIN04 = HAL_GPIO_ReadPin(DIN04_GPIO_Port, DIN04_Pin);
+
+		inputs->tDigitalInputs = tInputsTimmer + DIN_DEBOUNCING;
+	}
+
 	// ---------------------------------------------------------------------------------------------------
-
-
 
 	// TODO: we need to think the order of execution of the inputs (now they are a bit random)
 	// check if there are dependencies
@@ -86,7 +94,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
-	//	TODO: inputs->BDriverKill = digital read... (debouncing)
+	inputs->BDriverKill = !inputs->NDIN01;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
 
 	// ---------------------------------------------------------------------------------------------------
 	// NGear Conditioning
@@ -115,7 +123,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Steering Wheel Fitted Check
 
-	if((tCANSteeringWheelLastSeen + STEERING_WHEEL_FITTED_INTERVAL) < tCurrent) {
+	if((tCANSteeringWheelLastSeen + STEERING_WHEEL_FITTED_INTERVAL) < tInputsTimmer) {
 		inputs->BSteeringWheelFitted = 0;
 		RaiseFault(inputs, STEERING_WHEEL_FAULT);
 	}
@@ -132,7 +140,7 @@ void ReadInputs(InputStruct *inputs){
 	inputs->rClutchPaddleRawCAN = rClutchPaddleRawCAN;
 
 	// Analog Input & Mapping
-	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog01;
+	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog02;
 	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_MARGIN_MIN, VrCLUTCH_MARGIN_MAX);
 
 
@@ -167,7 +175,7 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BDnShiftButtonCAN = BDnShiftButtonCAN;
 
 	// Analog Input
-	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog02;
+	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog03;
 
 	// Level checking
 
@@ -261,7 +269,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// PCB Supply Voltage Conditioning
 
-	inputs->VSupply = inputs->VSHIFTERAnalog06 * VSUPPLY_DIVIDER_GAIN;
+	inputs->VSupply = inputs->VSHIFTERAnalog01 * VSUPPLY_DIVIDER_GAIN;
 
 
 	// ---------------------------------------------------------------------------------------------------
@@ -269,7 +277,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// CAN Input
 
-	if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tCurrent) {
+	if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tInputsTimmer) {
 		inputs->BnEngineInError = 1;
 		inputs->BnEngineReliable = 0;
 		inputs->nEngine = 0; 		// we force to zero if in error

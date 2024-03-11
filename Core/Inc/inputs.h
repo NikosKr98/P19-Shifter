@@ -10,7 +10,7 @@
 
 #include <Utils.h>
 
-// ANALOGS
+// ANALOG
 #define ADC_BUFFER_SIZE 						2192*2	// is the size of the buffer, 2 times the samples needed for 1 cycle
 #define ADC_BUFFER_HALF_SIZE 					ADC_BUFFER_SIZE/2 // we use it to not do the division in run time
 #define ADC_NUMBER_OF_CHANNELS					8
@@ -24,6 +24,9 @@
 #define VUPDN_DNSHIFT_MIN						2.0f	// min limit to consider dnshift pressed
 #define VUPDN_BOTHPRESSED_MAX					0.95f	// max limit to consider both buttons pressed
 #define VUPDN_BOTHPRESSED_MIN					0.93f	// min limit to consider both buttons pressed
+
+// DIGITAL
+#define DIN_DEBOUNCING							20		// ms of debouncing for digital inputs
 
 // GEAR
 #define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
@@ -88,7 +91,7 @@ typedef struct _InputStruct {
 	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
 
 
-	//Analog Inputs
+	// Analog Inputs
 	float VSHIFTERAnalog01;
 	float VSHIFTERAnalog02;
 	float VSHIFTERAnalog03;
@@ -107,6 +110,12 @@ typedef struct _InputStruct {
 	uint16_t NADCChannel07Raw;
 	uint16_t NADCChannel08Raw;
 
+	// Digital Inputs
+	uint8_t NDIN01;
+	uint8_t NDIN02;
+	uint8_t NDIN03;
+	uint8_t NDIN04;
+	uint32_t tDigitalInputs;
 
 	// GEAR
 	uint8_t BNGearInError;					// error flag for NGear

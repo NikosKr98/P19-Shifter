@@ -47,13 +47,18 @@ void WriteOutputs(OutputStruct *output) {
 
 	// CLUTCH
 
-
-	// Do a clipping on the xClutchTarget to make sure we do not exceed the servo min and max values
-	// put the target directly in the timer period function
-	// The output for the clutch servo is a +5V pulse 50% dutycycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
+	// Clamping to avoid out of bounds values
 	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
 
+	// The output for the clutch servo is a +5V (or 3.3V) pulse 50% duty cycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 
+	// we double the auto reload counter to multiply the frequency by 2
+	// (the servo expects the pulse to be 900 - 2100 usec) so the period of the pulse needs to be the double,
+	//since the duty cycle is 50%)
+	xClutchTargetOut *= 2;
+
+	// think about not putting the duty cycle at 50% but to try and fine tune the compare and autoreload.
+	// think about the auto preload function. It is now enabled, is it correct?
 	// update the Timer Registers, using the TIM_Exported_Macros
 //	__HAL_TIM_SET_PRESCALER(&htim1, nTimerPrescaler - 1);
 	__HAL_TIM_SET_AUTORELOAD(&htim1, xClutchTargetOut -1 );
@@ -61,9 +66,6 @@ void WriteOutputs(OutputStruct *output) {
 
 
 	// Shifting Ports
-	// remember: Upshift: activated when writing 0 and not activating when writing 1
-	//			 Dnshift: activated when writing 1 and not activating when writing 0
-
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
 	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BUpShiftPortState);
 	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BDnShiftPortState);

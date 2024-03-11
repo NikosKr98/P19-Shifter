@@ -28,11 +28,10 @@ static const float NGearMap[2][TOTAL_GEARS] = {
 
 };
 
-
 static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = {
 
-	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,   100},
-	/* Out: xClutchTarget */		{1100, 1180, 1260, 1340, 1420, 1500, 1580, 1660, 1720, 1800, 1900}
+	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100},
+	/* Out: xClutchTarget */		{900, 1100, 1300, 1500, 1700, 1750, 1800, 1850, 1900, 1950, 2100}
 };
 
 static const float rClutchMap[2][CLUTCH_PADDLE_MAP_SIZE] = {

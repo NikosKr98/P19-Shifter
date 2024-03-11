@@ -34,8 +34,8 @@
 
 #define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
 #define xCLUTCH_REST_POSITION				1500	// the clutch position when not actuated
-#define xCLUTCH_ABSOLUTE_MIN				1100	// min clutch position value
-#define xCLUTCH_ABSOLUTE_MAX				1900	// max clutch position value
+#define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
+#define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
 
 
 
