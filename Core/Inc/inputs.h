@@ -16,6 +16,11 @@
 #define ADC_NUMBER_OF_CHANNELS					6
 
 									// TODO: we will eventually have 8 analog channels
+// DIGITAL OUT
+	// DO01: CLUTCH PWM
+	// DO02: VALVE2 (DOWN)
+	// DO03: VALVE1 (UP)
+	// DO04: ECU (SPACK CUT)
 
 #define VSUPPLY_DIVIDER_GAIN					0.23077f
 
@@ -35,6 +40,9 @@
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 		80		// Threshold % to consider Clutch Paddle as pressed
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 						100		// max clutch paddle percentage
+#define VrCLUTCH_MARGIN_MIN 					0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VrCLUTCH_MARGIN_MAX 					0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+
 
 // CAN
 #define SIU_RX_ID 								0x310
@@ -149,7 +157,7 @@ typedef struct _InputStruct {
 	int8_t rClutchPaddleRawCAN;				// Steering wheel CAN clutch paddle percentage (can be from -x% to 10x% to allow margin)
 	uint8_t BrClutchPaddleRawAnalogInError;	// 1 if internal Clutch Analog Measurement in Error
 	float VrClutchPaddleRawAnalog;			// Internal Clutch Paddle Analog Voltage Measurement
-	int8_t rClutchPaddleRawAnalog;			// Internal Clutch Paddle Analog Measurement (can be from -x% to 10x% to allow margin)
+	float rClutchPaddleRawAnalog;			// Internal Clutch Paddle Analog Measurement (can be from -x% to 10x% to allow margin)
 	uint8_t BrClutchPaddleInError;			// 1 if Clutch Paddle is in error (both Analog and CAN)
 	int8_t rClutchPaddle;					// Steering wheel clutch paddle Clipped percentage
 	SignalSource NrClutchPaddleSource;		// can be CAN or Analog

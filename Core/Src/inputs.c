@@ -131,13 +131,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BrClutchPaddleRawCANInError = BrClutchPaddleRawInErrorCAN;
 	inputs->rClutchPaddleRawCAN = rClutchPaddleRawCAN;
 
-	// Analog Input
-	// TODO: analog read, convert to voltage and map to -x% 10x%
+	// Analog Input & Mapping
 	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog01;
+	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_MARGIN_MIN, VrCLUTCH_MARGIN_MAX);
 
-	// mapping
-
-	// check for out of bounds and set in error
 
 	// Clutch Paddle Input Strategy
 	if(inputs->BSteeringWheelFitted && !inputs->BrClutchPaddleRawCANInError) {
@@ -147,7 +144,7 @@ void ReadInputs(InputStruct *inputs){
 
 	}
 	else if(!inputs->BrClutchPaddleRawAnalogInError) {
-		rClutchPaddleRaw = inputs->rClutchPaddleRawAnalog;
+		rClutchPaddleRaw = (int8_t)round(inputs->rClutchPaddleRawAnalog);
 		inputs->NrClutchPaddleSource = Analog;
 		inputs->BrClutchPaddleInError = 0;
 	}
@@ -355,6 +352,11 @@ void ReadInputs(InputStruct *inputs){
 void InitInputs(void) {
 	HAL_ADCEx_Calibration_Start(&hadc1);
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
+
+
+	// set the duty cycle to 0 before enabling the PWM in order to avoid unwanted movement
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, 0);
+	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 }
 
 uint8_t CheckFaults(InputStruct *inputs) {

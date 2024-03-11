@@ -15,6 +15,11 @@
 
 #define CLUTCH_PADDLE_TARGET_MAP_MAX_POINTS	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
 
+#define CLUTCH_PADDLE_MAP_SIZE	2
+
+#define CLUTCH_PADDLE_MAP_MAX		104
+#define CLUTCH_PADDLE_MAP_MIN		-4
+
 //    {3600, 3750},  // Gear 0
 //    {3900, 4000},  // Gear 1
 //    {3200, 3300},  // Gear 2
@@ -38,6 +43,11 @@ static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MA
 };
 
 
+static const float rClutchMap[2][CLUTCH_PADDLE_MAP_SIZE] = {
+
+		/* In:  VrClutchPaddleRaw */	{		0.500			, 	 		3.000	 	},
+		/* Out: rClutchPaddle 	  */	{ CLUTCH_PADDLE_MAP_MIN ,  CLUTCH_PADDLE_MAP_MAX}
+};
 
 static const uint16_t nEngineAntistallMap[TOTAL_GEARS-1] = { 	2000,	// 1st min rpm threshold (not needed for neutral gear)
 																2000,	// 2nd
