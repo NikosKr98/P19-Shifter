@@ -3118,9 +3118,9 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
-	inputs->BDriverKill = !inputs->NDIN01;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
+	inputs->BDriverKill = !inputs->NDIN04;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
  8001c08:	687b      	ldr	r3, [r7, #4]
- 8001c0a:	f893 3038 	ldrb.w	r3, [r3, #56]	; 0x38
+ 8001c0a:	f893 303b 	ldrb.w	r3, [r3, #59]	; 0x3b
  8001c0e:	2b00      	cmp	r3, #0
  8001c10:	bf0c      	ite	eq
  8001c12:	2301      	moveq	r3, #1

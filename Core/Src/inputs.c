@@ -94,7 +94,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
-	inputs->BDriverKill = !inputs->NDIN01;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
+	inputs->BDriverKill = !inputs->NDIN04;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
 
 	// ---------------------------------------------------------------------------------------------------
 	// NGear Conditioning
