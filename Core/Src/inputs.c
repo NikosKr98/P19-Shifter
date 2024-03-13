@@ -17,13 +17,12 @@
 uint32_t tInputsTimmer;
 
 // I/O Flags
-uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BEmergencyRequested=0;
+uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BDeclutchRequested=0;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
 volatile uint8_t BDnShiftButtonCAN, BDnShiftButtonCANInError;
-volatile uint8_t BLaunchRequestCAN, BLaunchButtonCANInError;
-volatile uint8_t BEmergencyButtonCAN, BEmergencyButtonCANInError;
+volatile uint8_t BButtonACAN, BButtonBCAN, BButtonCCAN, BButtonDCAN, BButtonECAN, BButtonFCAN;
 volatile int8_t rClutchPaddleRawCAN, BrClutchPaddleRawInErrorCAN;
 volatile uint16_t nEngineRawCAN;
 volatile uint32_t tCANSteeringWheelLastSeen;
@@ -36,6 +35,7 @@ volatile uint16_t NCanGetRxErrorCount=0;
 uint16_t NGearRawADCFiltered;
 volatile uint8_t NAdcBufferSide; // flag to determine the first or second half of the adc buffer for averaging
 int8_t rClutchPaddleRaw;
+int8_t rClutchPaddleDeclutch;
 
 
 // private functions declaration
@@ -82,6 +82,15 @@ void ReadInputs(InputStruct *inputs){
 
 		inputs->tDigitalInputs = tInputsTimmer + DIN_DEBOUNCING;
 	}
+
+
+	// Steering Wheel Buttons
+	inputs->BButtonA = BButtonACAN;
+	inputs->BButtonB = BButtonBCAN;
+	inputs->BButtonC = BButtonCCAN;
+	inputs->BButtonD = BButtonDCAN;
+	inputs->BButtonE = BButtonECAN;
+	inputs->BButtonF = BButtonFCAN;
 
 	// ---------------------------------------------------------------------------------------------------
 
@@ -133,6 +142,18 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
+	// DECLUTCH Input
+
+	if(inputs->BSteeringWheelFitted) {
+		inputs->BDeclutchRequest = inputs->BButtonF;
+		inputs->BDeclutchRequestInError = 0;
+	}
+	else {
+		inputs->BDeclutchRequestInError = 1;
+		inputs->BDeclutchRequest = 0;		// we force to zero if in error
+	}
+
+	// ---------------------------------------------------------------------------------------------------
 	// Clutch Paddle Conditioning
 
 	// CAN Input
@@ -158,11 +179,16 @@ void ReadInputs(InputStruct *inputs){
 	}
 	else {
 		inputs->BrClutchPaddleInError = 1;
-		rClutchPaddleRaw = (inputs->BEmergencyRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
+		rClutchPaddleRaw = rCLUTCH_PADDLE_IN_ERROR_DEFAULT;
+	}
+
+	// DECLUTCH
+	if(!inputs->BDeclutchRequestInError) {
+		rClutchPaddleDeclutch = (inputs->BDeclutchRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
 	}
 
 	// CLAMPING
-	inputs->rClutchPaddle = CLAMP(rClutchPaddleRaw, CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
+	inputs->rClutchPaddle = CLAMP(MAX(rClutchPaddleRaw, rClutchPaddleDeclutch), CLUTCH_PADDLE_MIN, CLUTCH_PADDLE_MAX);
 
 
 	// ---------------------------------------------------------------------------------------------------
@@ -234,31 +260,11 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// Emergency Button Conditioning
-
-	// CAN Input
-	inputs->BEmergencyButtonCANInError = BEmergencyButtonCANInError;
-	inputs->BEmergencyButtonCAN = BEmergencyButtonCAN;
-
-	// Emergency Input Strategy
-	if(inputs->BSteeringWheelFitted && !inputs->BEmergencyButtonCANInError) {
-		inputs->BEmergencyRequest = inputs->BEmergencyButtonCAN;
-		inputs->BEmergencyRequestInError = 0;
-	}
-	else {
-		inputs->BEmergencyRequestInError = 1;
-		inputs->BEmergencyRequest = 0;		// we force to zero if in error
-	}
-
-	// ---------------------------------------------------------------------------------------------------
-	// Launch Button Conditioning
-
-	inputs->BLaunchButtonCANInError = BLaunchButtonCANInError;
-	inputs->BLaunchButtonCAN = BLaunchRequestCAN;
+	// Launch
 
 	// Launch Input Strategy
-	if(inputs->BSteeringWheelFitted && !inputs->BLaunchButtonCANInError) {
-		inputs->BLaunchRequest = inputs->BLaunchButtonCAN;
+	if(inputs->BSteeringWheelFitted) {
+		inputs->BLaunchRequest = inputs->BButtonD;
 		inputs->BLaunchRequestInError = 0;
 	}
 	else {
@@ -333,13 +339,13 @@ void ReadInputs(InputStruct *inputs){
 		PushEvent(inputs, LAUNCH_RELEASE_EVT);
 	}
 
-	if(!inputs->BEmergencyRequestInError && inputs->BEmergencyRequest && !BEmergencyRequested) {
-		BEmergencyRequested = 1;
-		PushEvent(inputs, EMERGENCY_PRESS_EVT);
+	if(!inputs->BDeclutchRequestInError && inputs->BDeclutchRequest && !BDeclutchRequested) {
+		BDeclutchRequested = 1;
+		PushEvent(inputs, DECLUTCH_PRESS_EVT);
 	}
-	else if(!inputs->BEmergencyRequestInError && !inputs->BEmergencyRequest && BEmergencyRequested) {
-		BEmergencyRequested = 0;
-		PushEvent(inputs, EMERGENCY_RELEASE_EVT);
+	else if(!inputs->BDeclutchRequestInError && !inputs->BDeclutchRequest && BDeclutchRequested) {
+		BDeclutchRequested = 0;
+		PushEvent(inputs, DECLUTCH_RELEASE_EVT);
 	}
 
 	// TODO: the release gets triggered always, so think of a better way to create only 1 event, or eliminate it completely
@@ -385,14 +391,17 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
 		 BUpShiftButtonCANInError 		= (RxBuffer[0] >> 0) & 0x01;
 		 BDnShiftButtonCANInError 		= (RxBuffer[0] >> 1) & 0x01;
-		 BLaunchButtonCANInError 		= (RxBuffer[0] >> 2) & 0x01;
-		 BEmergencyButtonCANInError 	= (RxBuffer[0] >> 3) & 0x01;
+
 		 BrClutchPaddleRawInErrorCAN 	= (RxBuffer[0] >> 6) & 0x01;
 
 		 BUpShiftButtonCAN 				= (RxBuffer[1] >> 0) & 0x01;
 		 BDnShiftButtonCAN 				= (RxBuffer[1] >> 1) & 0x01;
-		 BLaunchRequestCAN 				= (RxBuffer[1] >> 2) & 0x01;
-		 BEmergencyButtonCAN 			= (RxBuffer[1] >> 3) & 0x01;
+		 BButtonACAN	 				= (RxBuffer[1] >> 2) & 0x01;
+		 BButtonBCAN	 				= (RxBuffer[1] >> 3) & 0x01;
+		 BButtonCCAN	 				= (RxBuffer[1] >> 4) & 0x01;
+		 BButtonDCAN	 				= (RxBuffer[1] >> 5) & 0x01;
+		 BButtonECAN	 				= (RxBuffer[1] >> 6) & 0x01;
+		 BButtonFCAN	 				= (RxBuffer[1] >> 7) & 0x01;
 
 		 rClutchPaddleRawCAN 			= RxBuffer[2];
 

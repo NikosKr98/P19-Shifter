@@ -33,6 +33,7 @@
 #define VNGEAR_MARGIN_MAX 						0.2f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 
 // CLUTCH
+#define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if evey input is in error
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 		80		// Threshold % to consider Clutch Paddle as pressed
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 						100		// max clutch paddle percentage
@@ -62,8 +63,8 @@ typedef enum _Event {
 	DNSHIFT_RELEASE_EVT,
 	LAUNCH_PRESS_EVT,
 	LAUNCH_RELEASE_EVT,
-	EMERGENCY_PRESS_EVT,
-	EMERGENCY_RELEASE_EVT,
+	DECLUTCH_PRESS_EVT,
+	DECLUTCH_RELEASE_EVT,
 	CLUTCH_PADDLE_PRESS_EVT,
 	CLUTCH_PADDLE_RELEASE_EVT
 } Event;
@@ -87,9 +88,9 @@ typedef enum _SigSource {
 } SignalSource;
 
 typedef struct _InputStruct {
+
 	uint32_t nEventStatus; 			// 32-bit bitfield for events
 	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
-
 
 	// Analog Inputs
 	float VSHIFTERAnalog01;
@@ -142,18 +143,6 @@ typedef struct _InputStruct {
 	SignalSource NBUpshiftRequestSource;	// CAN or Analog
 	SignalSource NBDnshiftRequestSource;	// CAN or Analog
 
-	// Launch Button
-	uint8_t BLaunchButtonCANInError;		// 1 if steering wheel CAN Launch control Button is in error
-	uint8_t BLaunchButtonCAN;				// steering wheel CAN Launch control Button (reflects the state of the button)
-	uint8_t BLaunchRequestInError;			// 1 if steering wheel CAN Launch control Button is in error
-	uint8_t BLaunchRequest;					// Launch control Button (reflects the state of the button)
-
-	// Emergency Button
-	uint8_t BEmergencyButtonCANInError;		// 1 if steering wheel CAN Emergency Button is in error
-	uint8_t BEmergencyButtonCAN;			// steering wheel CAN Emergency Button (reflects the state of the button)
-	uint8_t BEmergencyRequestInError;		// 1 if steering wheel CAN Emergency Button is in error
-	uint8_t BEmergencyRequest;				// Emergency Button (reflects the state of the button)
-
 	// Clutch Paddles
 	uint8_t BrClutchPaddleRawCANInError;	// 1 if CAN clutch paddle value is in error
 	int8_t rClutchPaddleRawCAN;				// Steering wheel CAN clutch paddle percentage (can be from -x% to 10x% to allow margin)
@@ -163,6 +152,22 @@ typedef struct _InputStruct {
 	uint8_t BrClutchPaddleInError;			// 1 if Clutch Paddle is in error (both Analog and CAN)
 	int8_t rClutchPaddle;					// Steering wheel clutch paddle Clipped percentage
 	SignalSource NrClutchPaddleSource;		// can be CAN or Analog
+
+	// Steering Wheel Buttons
+	uint8_t BButtonA;						// flag for button press from CAN
+	uint8_t BButtonB;						// flag for button press from CAN
+	uint8_t BButtonC;						// flag for button press from CAN
+	uint8_t BButtonD;						// flag for button press from CAN
+	uint8_t BButtonE;						// flag for button press from CAN
+	uint8_t BButtonF;						// flag for button press from CAN
+
+	// Launch
+	uint8_t BLaunchRequestInError;			// 1 if steering wheel CAN is in error or not fitted
+	uint8_t BLaunchRequest;					// Launch Control Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
+
+	// DECLUTCH
+	uint8_t BDeclutchRequestInError;		// 1 if steering wheel CAN is in error or not fitted
+	uint8_t BDeclutchRequest;				// Declutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
 
 	// ECU
 	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable

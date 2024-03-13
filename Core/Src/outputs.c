@@ -73,6 +73,8 @@ void WriteOutputs(OutputStruct *output) {
 
 
 	// CAN
+	// add the info of the shutDown (DriverKill) in the CAn for others to see
+	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF
 }
 
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {

@@ -91,7 +91,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			// TODO: terminate potential array timed control that runs below
 		}
 		else {
-			if(CheckEvent(EMERGENCY_RELEASE_EVT)) {
+			if(CheckEvent(DECLUTCH_RELEASE_EVT)) {
 				// TODO: run the release array. here we initialize it
 				// create lookup table running request for accel and emergency clutchButton release
 			}
