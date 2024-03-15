@@ -72,7 +72,6 @@ void ReadInputs(InputStruct *inputs){
 	inputs->VSHIFTERAnalog07 = (float)(inputs->NADCChannel07Raw * 3.3 / 4095.0);
 	inputs->VSHIFTERAnalog08 = (float)(inputs->NADCChannel08Raw * 3.3 / 4095.0);
 
-
 	//Digital Inputs
 	if(inputs->tDigitalInputs < tInputsTimmer) {
 		inputs->NDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
@@ -83,14 +82,13 @@ void ReadInputs(InputStruct *inputs){
 		inputs->tDigitalInputs = tInputsTimmer + DIN_DEBOUNCING;
 	}
 
-
 	// Steering Wheel Buttons
-	inputs->BButtonA = BButtonACAN;
-	inputs->BButtonB = BButtonBCAN;
-	inputs->BButtonC = BButtonCCAN;
-	inputs->BButtonD = BButtonDCAN;
-	inputs->BButtonE = BButtonECAN;
-	inputs->BButtonF = BButtonFCAN;
+	inputs->BSWButtonA = BButtonACAN;
+	inputs->BSWButtonB = BButtonBCAN;
+	inputs->BSWButtonC = BButtonCCAN;
+	inputs->BSWButtonD = BButtonDCAN;
+	inputs->BSWButtonE = BButtonECAN;
+	inputs->BSWButtonF = BButtonFCAN;
 
 	// ---------------------------------------------------------------------------------------------------
 
@@ -145,7 +143,7 @@ void ReadInputs(InputStruct *inputs){
 	// DECLUTCH Input
 
 	if(inputs->BSteeringWheelFitted) {
-		inputs->BDeclutchRequest = inputs->BButtonF;
+		inputs->BDeclutchRequest = inputs->BSWButtonF;
 		inputs->BDeclutchRequestInError = 0;
 	}
 	else {
@@ -184,7 +182,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// DECLUTCH
 	if(!inputs->BDeclutchRequestInError) {
-		rClutchPaddleDeclutch = (inputs->BDeclutchRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
+		rClutchPaddleDeclutch = (inputs->BDeclutchRequest == 1 ? rCLUTCH_ON_DECLUTCH : 0);	// we use the button to fully press the clutch
 	}
 
 	// CLAMPING
@@ -201,10 +199,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BDnShiftButtonCAN = BDnShiftButtonCAN;
 
 	// Analog Input
+	// TODO: Debouncing and STUCK detection ???
 	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog03;
 
 	// Level checking
-
 	if(inputs->NBUpDnShiftButtonAnalog >= VUPDN_NOPRESS) {
 		inputs->NBUpDnShiftButtonAnalog = 0;
 		inputs->BUpDnShiftButtonAnalogInError = 0;
@@ -264,7 +262,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// Launch Input Strategy
 	if(inputs->BSteeringWheelFitted) {
-		inputs->BLaunchRequest = inputs->BButtonD;
+		inputs->BLaunchRequest = inputs->BSWButtonD;
 		inputs->BLaunchRequestInError = 0;
 	}
 	else {
@@ -297,17 +295,18 @@ void ReadInputs(InputStruct *inputs){
 
 	inputs->nEngine = nEngineRawCAN; // TODO: conversion??
 	// TODO: we have both in error and reliable. In the controller we will consider reliable as the strategy
-	// think about doing extra checks apart from CANRx timing
+	// think about doing extra checks apart from CANRx timing, such as noise and out of bounds checks
 
 
 	if(inputs->BnEngineInError) {
-		inputs->nEngine = 0; 		// we force to zero if in error
+		inputs->nEngine = nENGINE_IN_ERROR_DEFAULT; 		// we force to zero if in error
 	}
 
 	// ---------------------------------------------------------------------------------------------------
 	// CAN Diagnostics
+
 	inputs->NCANErrors = NCANErrorCount;			// update can error count
-	inputs->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
+	inputs->NCANRxErrors = NCanGetRxErrorCount;		// update can Rx error count
 
 	// ---------------------------------------------------------------------------------------------------
 	// EVENTS

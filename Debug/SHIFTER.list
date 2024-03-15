@@ -37,15 +37,15 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_rnglists 00000d06  00000000  00000000  00037118  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_macro  00019fbd  00000000  00000000  00037e1e  2**0
+ 17 .debug_macro  00019fc9  00000000  00000000  00037e1e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_line   000146b7  00000000  00000000  00051ddb  2**0
+ 18 .debug_line   000146b7  00000000  00000000  00051de7  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_str    00093f9d  00000000  00000000  00066492  2**0
+ 19 .debug_str    00093fdc  00000000  00000000  0006649e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .debug_frame  00004824  00000000  00000000  000fa430  2**2
+ 20 .debug_frame  00004824  00000000  00000000  000fa47c  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000005a  00000000  00000000  000fec54  2**0
+ 21 .debug_line_str 0000005a  00000000  00000000  000feca0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -3054,7 +3054,6 @@ void ReadInputs(InputStruct *inputs){
  8001b7c:	687b      	ldr	r3, [r7, #4]
  8001b7e:	625a      	str	r2, [r3, #36]	; 0x24
 
-
 	//Digital Inputs
 	if(inputs->tDigitalInputs < tInputsTimmer) {
  8001b80:	687b      	ldr	r3, [r7, #4]
@@ -3104,9 +3103,8 @@ void ReadInputs(InputStruct *inputs){
  8001bde:	63da      	str	r2, [r3, #60]	; 0x3c
 	}
 
-
 	// Steering Wheel Buttons
-	inputs->BButtonA = BButtonACAN;
+	inputs->BSWButtonA = BButtonACAN;
  8001be0:	4b09      	ldr	r3, [pc, #36]	; (8001c08 <ReadInputs+0x330>)
  8001be2:	781b      	ldrb	r3, [r3, #0]
  8001be4:	e012      	b.n	8001c0c <ReadInputs+0x334>
@@ -3123,31 +3121,31 @@ void ReadInputs(InputStruct *inputs){
  8001c0c:	b2da      	uxtb	r2, r3
  8001c0e:	687b      	ldr	r3, [r7, #4]
  8001c10:	f883 206f 	strb.w	r2, [r3, #111]	; 0x6f
-	inputs->BButtonB = BButtonBCAN;
+	inputs->BSWButtonB = BButtonBCAN;
  8001c14:	4b99      	ldr	r3, [pc, #612]	; (8001e7c <ReadInputs+0x5a4>)
  8001c16:	781b      	ldrb	r3, [r3, #0]
  8001c18:	b2da      	uxtb	r2, r3
  8001c1a:	687b      	ldr	r3, [r7, #4]
  8001c1c:	f883 2070 	strb.w	r2, [r3, #112]	; 0x70
-	inputs->BButtonC = BButtonCCAN;
+	inputs->BSWButtonC = BButtonCCAN;
  8001c20:	4b97      	ldr	r3, [pc, #604]	; (8001e80 <ReadInputs+0x5a8>)
  8001c22:	781b      	ldrb	r3, [r3, #0]
  8001c24:	b2da      	uxtb	r2, r3
  8001c26:	687b      	ldr	r3, [r7, #4]
  8001c28:	f883 2071 	strb.w	r2, [r3, #113]	; 0x71
-	inputs->BButtonD = BButtonDCAN;
+	inputs->BSWButtonD = BButtonDCAN;
  8001c2c:	4b95      	ldr	r3, [pc, #596]	; (8001e84 <ReadInputs+0x5ac>)
  8001c2e:	781b      	ldrb	r3, [r3, #0]
  8001c30:	b2da      	uxtb	r2, r3
  8001c32:	687b      	ldr	r3, [r7, #4]
  8001c34:	f883 2072 	strb.w	r2, [r3, #114]	; 0x72
-	inputs->BButtonE = BButtonECAN;
+	inputs->BSWButtonE = BButtonECAN;
  8001c38:	4b93      	ldr	r3, [pc, #588]	; (8001e88 <ReadInputs+0x5b0>)
  8001c3a:	781b      	ldrb	r3, [r3, #0]
  8001c3c:	b2da      	uxtb	r2, r3
  8001c3e:	687b      	ldr	r3, [r7, #4]
  8001c40:	f883 2073 	strb.w	r2, [r3, #115]	; 0x73
-	inputs->BButtonF = BButtonFCAN;
+	inputs->BSWButtonF = BButtonFCAN;
  8001c44:	4b91      	ldr	r3, [pc, #580]	; (8001e8c <ReadInputs+0x5b4>)
  8001c46:	781b      	ldrb	r3, [r3, #0]
  8001c48:	b2da      	uxtb	r2, r3
@@ -3298,7 +3296,7 @@ void ReadInputs(InputStruct *inputs){
  8001d32:	f893 307e 	ldrb.w	r3, [r3, #126]	; 0x7e
  8001d36:	2b00      	cmp	r3, #0
  8001d38:	d00a      	beq.n	8001d50 <ReadInputs+0x478>
-		inputs->BDeclutchRequest = inputs->BButtonF;
+		inputs->BDeclutchRequest = inputs->BSWButtonF;
  8001d3a:	687b      	ldr	r3, [r7, #4]
  8001d3c:	f893 2074 	ldrb.w	r2, [r3, #116]	; 0x74
  8001d40:	687b      	ldr	r3, [r7, #4]
@@ -3438,7 +3436,7 @@ void ReadInputs(InputStruct *inputs){
  8001e2a:	f893 3077 	ldrb.w	r3, [r3, #119]	; 0x77
  8001e2e:	2b00      	cmp	r3, #0
  8001e30:	d109      	bne.n	8001e46 <ReadInputs+0x56e>
-		rClutchPaddleDeclutch = (inputs->BDeclutchRequest == 1 ? 100 : 0);	// we use the extra button to fully press the clutch
+		rClutchPaddleDeclutch = (inputs->BDeclutchRequest == 1 ? rCLUTCH_ON_DECLUTCH : 0);	// we use the button to fully press the clutch
  8001e32:	687b      	ldr	r3, [r7, #4]
  8001e34:	f893 3078 	ldrb.w	r3, [r3, #120]	; 0x78
  8001e38:	2b01      	cmp	r3, #1
@@ -3523,6 +3521,7 @@ void ReadInputs(InputStruct *inputs){
  8001eec:	f883 2051 	strb.w	r2, [r3, #81]	; 0x51
 
 	// Analog Input
+	// TODO: Debouncing and STUCK detection ???
 	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog03;
  8001ef0:	687b      	ldr	r3, [r7, #4]
  8001ef2:	691a      	ldr	r2, [r3, #16]
@@ -3530,7 +3529,6 @@ void ReadInputs(InputStruct *inputs){
  8001ef6:	655a      	str	r2, [r3, #84]	; 0x54
 
 	// Level checking
-
 	if(inputs->NBUpDnShiftButtonAnalog >= VUPDN_NOPRESS) {
  8001ef8:	687b      	ldr	r3, [r7, #4]
  8001efa:	f893 3058 	ldrb.w	r3, [r3, #88]	; 0x58
@@ -3778,7 +3776,7 @@ void ReadInputs(InputStruct *inputs){
  80020ca:	f893 307e 	ldrb.w	r3, [r3, #126]	; 0x7e
  80020ce:	2b00      	cmp	r3, #0
  80020d0:	d00a      	beq.n	80020e8 <ReadInputs+0x810>
-		inputs->BLaunchRequest = inputs->BButtonD;
+		inputs->BLaunchRequest = inputs->BSWButtonD;
  80020d2:	687b      	ldr	r3, [r7, #4]
  80020d4:	f893 2072 	ldrb.w	r2, [r3, #114]	; 0x72
  80020d8:	687b      	ldr	r3, [r7, #4]
@@ -3878,7 +3876,7 @@ void ReadInputs(InputStruct *inputs){
  800218c:	687b      	ldr	r3, [r7, #4]
  800218e:	f8a3 207c 	strh.w	r2, [r3, #124]	; 0x7c
 	// TODO: we have both in error and reliable. In the controller we will consider reliable as the strategy
-	// think about doing extra checks apart from CANRx timing
+	// think about doing extra checks apart from CANRx timing, such as noise and out of bounds checks
 
 
 	if(inputs->BnEngineInError) {
@@ -3886,7 +3884,7 @@ void ReadInputs(InputStruct *inputs){
  8002194:	f893 3079 	ldrb.w	r3, [r3, #121]	; 0x79
  8002198:	2b00      	cmp	r3, #0
  800219a:	d003      	beq.n	80021a4 <ReadInputs+0x8cc>
-		inputs->nEngine = 0; 		// we force to zero if in error
+		inputs->nEngine = nENGINE_IN_ERROR_DEFAULT; 		// we force to zero if in error
  800219c:	687b      	ldr	r3, [r7, #4]
  800219e:	2200      	movs	r2, #0
  80021a0:	f8a3 207c 	strh.w	r2, [r3, #124]	; 0x7c
@@ -3894,13 +3892,14 @@ void ReadInputs(InputStruct *inputs){
 
 	// ---------------------------------------------------------------------------------------------------
 	// CAN Diagnostics
+
 	inputs->NCANErrors = NCANErrorCount;			// update can error count
  80021a4:	4b67      	ldr	r3, [pc, #412]	; (8002344 <ReadInputs+0xa6c>)
  80021a6:	781b      	ldrb	r3, [r3, #0]
  80021a8:	b2da      	uxtb	r2, r3
  80021aa:	687b      	ldr	r3, [r7, #4]
  80021ac:	f883 207f 	strb.w	r2, [r3, #127]	; 0x7f
-	inputs->NCANRxErrors = NCanGetRxErrorCount;	// update can Rx error count
+	inputs->NCANRxErrors = NCanGetRxErrorCount;		// update can Rx error count
  80021b0:	4b65      	ldr	r3, [pc, #404]	; (8002348 <ReadInputs+0xa70>)
  80021b2:	881b      	ldrh	r3, [r3, #0]
  80021b4:	b29b      	uxth	r3, r3

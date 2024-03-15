@@ -39,8 +39,10 @@
 #define CLUTCH_PADDLE_MAX 						100		// max clutch paddle percentage
 #define VrCLUTCH_MARGIN_MIN 					0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
 #define VrCLUTCH_MARGIN_MAX 					0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define rCLUTCH_ON_DECLUTCH						100		// the desired clutch percentage when pressing the delutch button
 
-
+// ENGINE RPM
+#define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
 // CAN
 #define SIU_RX_ID 								0x310
 #define ECU_RX_ID 								0x311
@@ -154,12 +156,12 @@ typedef struct _InputStruct {
 	SignalSource NrClutchPaddleSource;		// can be CAN or Analog
 
 	// Steering Wheel Buttons
-	uint8_t BButtonA;						// flag for button press from CAN
-	uint8_t BButtonB;						// flag for button press from CAN
-	uint8_t BButtonC;						// flag for button press from CAN
-	uint8_t BButtonD;						// flag for button press from CAN
-	uint8_t BButtonE;						// flag for button press from CAN
-	uint8_t BButtonF;						// flag for button press from CAN
+	uint8_t BSWButtonA;						// flag for button press from CAN
+	uint8_t BSWButtonB;						// flag for button press from CAN
+	uint8_t BSWButtonC;						// flag for button press from CAN
+	uint8_t BSWButtonD;						// flag for button press from CAN
+	uint8_t BSWButtonE;						// flag for button press from CAN
+	uint8_t BSWButtonF;						// flag for button press from CAN
 
 	// Launch
 	uint8_t BLaunchRequestInError;			// 1 if steering wheel CAN is in error or not fitted
