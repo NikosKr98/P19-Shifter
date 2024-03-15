@@ -35,11 +35,15 @@
 // CLUTCH
 #define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if evey input is in error
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 		80		// Threshold % to consider Clutch Paddle as pressed
+#define CLUTCH_PADDLE_RELEASED_THRESHOLD		0		// Threshold % to consider Clutch Paddle as released
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 						100		// max clutch paddle percentage
 #define VrCLUTCH_MARGIN_MIN 					0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
 #define VrCLUTCH_MARGIN_MAX 					0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define rCLUTCH_ON_DECLUTCH						100		// the desired clutch percentage when pressing the delutch button
+
+// TOGGLE SWITCHES
+#define TOGGLE_SWITCH_DEBOUNCE					1000	// time interval for next toggle
 
 // ENGINE RPM
 #define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
@@ -114,10 +118,10 @@ typedef struct _InputStruct {
 	uint16_t NADCChannel08Raw;
 
 	// Digital Inputs
-	uint8_t NDIN01;
-	uint8_t NDIN02;
-	uint8_t NDIN03;
-	uint8_t NDIN04;
+	uint8_t NSHIFTERDIN01;
+	uint8_t NSHIFTERDIN02;
+	uint8_t NSHIFTERDIN03;
+	uint8_t NSHIFTERDIN04;
 	uint32_t tDigitalInputs;
 
 	// GEAR
@@ -170,6 +174,12 @@ typedef struct _InputStruct {
 	// DECLUTCH
 	uint8_t BDeclutchRequestInError;		// 1 if steering wheel CAN is in error or not fitted
 	uint8_t BDeclutchRequest;				// Declutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
+
+	// Toggle Switches
+	uint8_t NToggleSwitch01State;
+	uint8_t NToggleSwitch02State;
+	uint8_t NToggleSwitch03State;
+	uint8_t NToggleSwitch04State;
 
 	// ECU
 	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable

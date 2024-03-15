@@ -52,29 +52,29 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError) {
 
 				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
-
+					// Timer initialization of enable strategy
 					if(MyOutputs->NAntistallState == Off) {
 						MyOutputs->NAntistallState = Init;
 						tAntistallTimmer = HAL_GetTick();
 					}
-
+					// Activation
 					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 						MyOutputs->NAntistallState = Active;
 						MyOutputs->xClutchTargetProtection = xCLUTCH_ABSOLUTE_MAX;
 					}
 				}
-
+				// Not activation due to engine rpm returning over the limit, or early clutch paddle press
 				if(MyOutputs->NAntistallState == Init && (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear] || MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED)) {
 					MyOutputs->NAntistallState = Off;
 					MyOutputs->xClutchTargetProtection = 0;
 				}
-
+				// De-activation by Clutch paddle press
 				if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
 					MyOutputs->NAntistallState = Off;
 					MyOutputs->xClutchTargetProtection = 0;
 				}
 			}
-
+			// De-activation by Driver Kill or Neutral or Errors
 			else {
 				MyOutputs->NAntistallState = Off;
 				MyOutputs->xClutchTargetProtection = 0;
@@ -104,6 +104,14 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// we take the maximum target generated from the Antistall/Protection strategy, the request
 		// from the driver and the shifter requests when enabled from the respective strategy
 		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
+
+
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	// TOGGLE SWITCHES & LEDS
+		MyOutputs->BSWLEDA = MyInputs->NToggleSwitch01State;
+		MyOutputs->BSWLEDB = MyInputs->NToggleSwitch02State;
+		MyOutputs->BSWLEDC = MyInputs->NToggleSwitch03State;
 
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -370,8 +378,6 @@ void SHIFTING_Event(void) {
 }
 void SHIFTING_Run(void) {
 
-	// run the timer for each gear/up-down (there are tables for that) and NShiftRequest tells us the direction
-
 	// based on the error status and the srat preferences decide in which controller to enter
 
 
@@ -413,6 +419,7 @@ void POSTSHIFT_Event(void) {
 }
 void POSTSHIFT_Run(void) {
 
+	// maybe we need to spend sometime here to let the shifting system stabilize and then determine the new current gear
 }
 
 
@@ -421,7 +428,7 @@ void ERROR_Entry(void) {
 	NCurrentState = ERROR_STATE;
 
 	// TODO: evaluate if it is correct to stop all output actions here...maybe not
-	// clutch should always work... if we entere here during an actuation, not sure if it is correct to interrupt it
+	// clutch should always work... if we enter here during an actuation, not sure if it is correct to interrupt it
 }
 
 void ERROR_Exit(void) {
@@ -445,10 +452,7 @@ void ERROR_Event(void) {
 void ERROR_Run(void) {
 
 	MyOutputs->NControlErrorStatus = 0;
-	// we save the last error			WE ALREADY DO IT IN MACRO
-//	if(MyOutputs->NControlErrorStatus != 0) {
-//		MyOutputs->NControlErrorStatusLogged = MyOutputs->NControlErrorStatus;
-//	}
+
 
 	// TODO: find a way to read the Control Errors and then reset them in order to clear them for the next cycle
 

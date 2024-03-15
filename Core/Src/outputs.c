@@ -71,9 +71,12 @@ void WriteOutputs(OutputStruct *output) {
 	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BDnShiftPortState);
 
 
+	// Toggle Switches
+	// output->BSWLEDA
+
 
 	// CAN
-	// add the info of the shutDown (DriverKill) in the CAn for others to see
+	// add the info of the shutDown (DriverKill) in the CAN for others to see
 	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF
 }
 

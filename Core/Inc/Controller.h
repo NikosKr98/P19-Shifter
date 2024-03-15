@@ -99,6 +99,12 @@ typedef struct {
 	uint16_t NTotalShifts;					// total number of shifts done since powerup
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
 
+	// Steering Wheel LED Demands
+	uint8_t BSWLEDA;
+	uint8_t BSWLEDB;
+	uint8_t BSWLEDC;
+	uint8_t BSWLEDD;
+
 	// ECU
 	uint8_t BSparkCut;						// flag to send to the ECU for spark cutting
 	uint8_t BLaunchControl;					// flag to send to the ECU for launch control

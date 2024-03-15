@@ -15,9 +15,10 @@
 
 // Timing variables
 uint32_t tInputsTimmer;
+uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
 
 // I/O Flags
-uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BDeclutchRequested=0;
+uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BDeclutchRequested=0, BClutchPaddlePressed=0;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
@@ -74,10 +75,10 @@ void ReadInputs(InputStruct *inputs){
 
 	//Digital Inputs
 	if(inputs->tDigitalInputs < tInputsTimmer) {
-		inputs->NDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
-		inputs->NDIN02 = HAL_GPIO_ReadPin(DIN02_GPIO_Port, DIN02_Pin);
-		inputs->NDIN03 = HAL_GPIO_ReadPin(DIN03_GPIO_Port, DIN03_Pin);
-		inputs->NDIN04 = HAL_GPIO_ReadPin(DIN04_GPIO_Port, DIN04_Pin);
+		inputs->NSHIFTERDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
+		inputs->NSHIFTERDIN02 = HAL_GPIO_ReadPin(DIN02_GPIO_Port, DIN02_Pin);
+		inputs->NSHIFTERDIN03 = HAL_GPIO_ReadPin(DIN03_GPIO_Port, DIN03_Pin);
+		inputs->NSHIFTERDIN04 = HAL_GPIO_ReadPin(DIN04_GPIO_Port, DIN04_Pin);
 
 		inputs->tDigitalInputs = tInputsTimmer + DIN_DEBOUNCING;
 	}
@@ -101,7 +102,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
-	inputs->BDriverKill = !inputs->NDIN04;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
+	inputs->BDriverKill = !inputs->NSHIFTERDIN04;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
 
 	// ---------------------------------------------------------------------------------------------------
 	// NGear Conditioning
@@ -204,23 +205,23 @@ void ReadInputs(InputStruct *inputs){
 
 	// Level checking
 	if(inputs->NBUpDnShiftButtonAnalog >= VUPDN_NOPRESS) {
-		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->NBUpDnShiftButtonAnalog = 0;	// None
 		inputs->BUpDnShiftButtonAnalogInError = 0;
 	}
 	else if(inputs->VUpDnButtonAnalog <= VUPDN_UPSHIFT_MAX && inputs->VUpDnButtonAnalog >= VUPDN_UPSHIFT_MIN) {
-		inputs->NBUpDnShiftButtonAnalog = 1;
+		inputs->NBUpDnShiftButtonAnalog = 1;	// Up Shift
 		inputs->BUpDnShiftButtonAnalogInError = 0;
 	}
 	else if(inputs->VUpDnButtonAnalog <= VUPDN_DNSHIFT_MAX && inputs->VUpDnButtonAnalog >= VUPDN_DNSHIFT_MIN) {
-		inputs->NBUpDnShiftButtonAnalog = 2;
+		inputs->NBUpDnShiftButtonAnalog = 2;	// Dn Shift
 		inputs->BUpDnShiftButtonAnalogInError = 0;
 	}
 	else if(inputs->VUpDnButtonAnalog <= VUPDN_BOTHPRESSED_MAX && inputs->VUpDnButtonAnalog >= VUPDN_BOTHPRESSED_MIN) {
-		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->NBUpDnShiftButtonAnalog = 0;	// None
 		inputs->BUpDnShiftButtonAnalogInError = 0;
 	}
 	else {
-		inputs->NBUpDnShiftButtonAnalog = 0;
+		inputs->NBUpDnShiftButtonAnalog = 0;	// Error
 		inputs->BUpDnShiftButtonAnalogInError = 1;
 	}
 
@@ -269,6 +270,34 @@ void ReadInputs(InputStruct *inputs){
 		inputs->BLaunchRequestInError = 1;
 		inputs->BLaunchRequest = 0;		// we force to zero if in error
 	}
+
+	// ---------------------------------------------------------------------------------------------------
+	// Toggle Switches
+
+	// Toggle 1
+	if(inputs->BSWButtonA && tToggleSwitch01 < tInputsTimmer) {
+		inputs->NToggleSwitch01State ^= 1;
+		tToggleSwitch01 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
+	}
+
+	// Toggle 2
+	if(inputs->BSWButtonB && tToggleSwitch02 < tInputsTimmer) {
+		inputs->NToggleSwitch02State ^= 1;
+		tToggleSwitch02 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
+	}
+
+	// Toggle 3
+	if(inputs->BSWButtonC && tToggleSwitch03 < tInputsTimmer) {
+		inputs->NToggleSwitch03State ^= 1;
+		tToggleSwitch03 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
+	}
+
+	// Toggle 4
+	if(inputs->BSWButtonE && tToggleSwitch04 < tInputsTimmer) {
+		inputs->NToggleSwitch04State ^= 1;
+		tToggleSwitch04 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
+	}
+
 
 	// ---------------------------------------------------------------------------------------------------
 	// PCB Supply Voltage Conditioning
@@ -347,15 +376,17 @@ void ReadInputs(InputStruct *inputs){
 		PushEvent(inputs, DECLUTCH_RELEASE_EVT);
 	}
 
-	// TODO: the release gets triggered always, so think of a better way to create only 1 event, or eliminate it completely
-		// we could create 2 more variables and monitor the transitions only from pressed to release and vice versa
-	// most likely it is not needed as an event because we are always checking the precise percentage in the controller code
-//		if(!inputs->BrClutchPaddleInError && (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD)) {
-//			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
-//		}
-//		else if(!inputs->BrClutchPaddleInError) {
-//			PushEvent(inputs, CLUTCH_PADDLE_RELEASE_EVT);
-//		}
+	if(!inputs->BrClutchPaddleInError) {
+		if (inputs->rClutchPaddle >= CLUTCH_PADDLE_PRESSED_THRESHOLD && !BClutchPaddlePressed) {
+			PushEvent(inputs, CLUTCH_PADDLE_PRESS_EVT);
+			BClutchPaddlePressed = 1;
+		}
+		else if (inputs->rClutchPaddle <= CLUTCH_PADDLE_RELEASED_THRESHOLD && BClutchPaddlePressed) {
+			PushEvent(inputs, CLUTCH_PADDLE_RELEASE_EVT);
+			BClutchPaddlePressed = 0;
+		}
+	}
+
 
 
 	// ---------------------------------------------------------------------------------------------------
