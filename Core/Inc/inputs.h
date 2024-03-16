@@ -45,8 +45,10 @@
 
 // DRIVER KILL
 #define DRIVER_KILL_DEBOUNCE					200		// debouncing for digital read
+
 // ENGINE RPM
 #define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
+
 // CAN
 #define SIU_RX_ID 								0x310
 #define ECU_RX_ID 								0x311
@@ -79,12 +81,6 @@ typedef enum _Event {
 /* FAULT DEFINITION */
 typedef enum _Fault {
 	NGEAR_FAULT,
-	STEERING_WHEEL_FAULT,
-	UPSHIFT_REQUEST_FAULT,
-	DNSHIFT_REQUEST_FAULT,
-	LAUNCH_REQUEST_FAULT,
-	CLUTCHPADDLE_FAULT,
-	ECU_COMMS_FAULT
 } Fault;
 
 /* SIGNAL SOURCE  */

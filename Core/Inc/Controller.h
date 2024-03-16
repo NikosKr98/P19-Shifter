@@ -15,25 +15,33 @@
 #define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// spark cut during upshifts
 #define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// spark cut during dnshifts
 
+#define ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR	1		// allow downshift from 1st to neutral when all Clutch paddle inputs are in error
 #define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
 #define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
 #define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
 #define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
 
-#define ANTISTALL_ACTIVE					1		// antistall enable strategy
-#define ANTISTALL_TRIGGER_TIME				1000	// antistall ms timeout for triggering
+#define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
+
+// ANTISTALL
+#define ANTISTALL_ENABLED					1		// antistall enable strategy
+#define ANTISTALL_TRIGGER_TIME				1000	// time for antistall to be triggered
 #define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
 
 // TIMING
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
 #define PRE_DNSHIFT_THRESHOLD_TIME			300		// the time we keep trying to accept an downshift request before we deny it
+#define POSTSHIFT_THRESHOLD_TIME			500		// the time we allow for all the conditions to return to nominal post shifting
 
-// CLUTCH
+// CLUTCH PADDLE
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
 
-#define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
+// CLUTCH
+#define xCLUTCH_BITE_POINT					1700	// the clutch bite point
 #define xCLUTCH_REST_POSITION				1500	// the clutch position when not actuated
+#define xCLUTCH_FULLY_ENGAGED				1900	// the fully engaged position of the clutch
+#define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
 #define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
 #define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
 
@@ -59,7 +67,8 @@ typedef enum _ControlError {
 	TARGET_GEAR_EXCEEDS_MAX,
 	RPM_ILLEGAL_FOR_DNSHIFT,
 	TARGET_GEAR_LESS_THAN_NEUTRAL,
-	SHIFT_TARGET_UNKNOWN
+	SHIFT_TARGET_UNKNOWN,
+	GEAR_TARGET_MISMATCH
 }ControlError;
 
 typedef enum _Shifts{
@@ -89,6 +98,7 @@ typedef struct {
 	float xClutchTargetManual;				// the clutch target opening requested from the clutch pad
 	uint16_t xClutchTargetShift;			// the clutch target opening requested from the shift control
 	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
+	uint16_t xClutchBitepoint;				// the clutch bite point
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated
 
 	// SHIFTER

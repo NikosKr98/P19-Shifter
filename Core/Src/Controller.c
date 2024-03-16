@@ -19,7 +19,7 @@ Shifts NShiftRequest;
 
 
 // timing variables
-uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tAntistallTimmer;
+uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer;
 
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
@@ -34,6 +34,8 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	MyInputs = inputs;
 	MyOutputs = outputs;
 
+	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;
+
 	IDLE_Entry();
 }
 
@@ -46,9 +48,9 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// ANTISTALL
-		#ifdef ANTISTALL_ACTIVE
+		#ifdef ANTISTALL_ENABLED
 
-			// if the shut down is activated and we are at gear greater than neutral
+			// if the shut down is activated and we are at gear greater than neutral we can enter
 			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError) {
 
 				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
@@ -302,7 +304,7 @@ void PRE_DNSHIFT_Event(void) {
 }
 void PRE_DNSHIFT_Run(void) {
 
-	if(MyInputs->NGear == 1 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_NEUTRAL_WITHOUT_CLUTCH) {	// trying to put neutral gear without clutch
+	if(MyInputs->NGear == 1 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_NEUTRAL_WITHOUT_CLUTCH && !(MyInputs->BrClutchPaddleInError && ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR)) {	// trying to put neutral gear without clutch
 		RaiseControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH);
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
@@ -365,7 +367,7 @@ void SHIFTING_Event(void) {
 		return;
 	}
 
-	// TODO: keep checking for control errors
+	// TODO: keep checking for control errors ??
 
 
 	if((tShiftTimer + tShifterMaxTransitTime) < tControllerTimmer) {	// the max time for the gear has expired
@@ -410,16 +412,36 @@ void POSTSHIFT_Exit(void) {
 }
 void POSTSHIFT_Event(void) {
 
+	if(CheckFaults(MyInputs)) {
+		SHIFTING_Exit();
+		ERROR_Entry();
+		return;
+	}
 
-	// think about the condition
-	POSTSHIFT_Exit();
-	IDLE_Entry();
-	return;
-	// remember return in all functions
+
+	if(!MyOutputs->NControlErrorStatus) {
+		// we update the Gear variable for the outputs
+		MyOutputs->NGear = MyInputs->NGear;
+		POSTSHIFT_Exit();
+		IDLE_Entry();
+		return;
+	}
+
+
+	// we check for control errors and if present after the time threshold, we abort
+	if(MyOutputs->NControlErrorStatus && (tPostShiftTimer + POSTSHIFT_THRESHOLD_TIME) <= HAL_GetTick()) {
+		POSTSHIFT_Exit();
+		ERROR_Entry();
+		return;
+	}
 }
 void POSTSHIFT_Run(void) {
 
-	// maybe we need to spend sometime here to let the shifting system stabilize and then determine the new current gear
+	if(CHECK_POST_SHIFT_GEAR && MyInputs->NGear != MyOutputs->NGearTarget) {
+		RaiseControlError(GEAR_TARGET_MISMATCH);
+	}
+	else { ClearControlError(GEAR_TARGET_MISMATCH); }
+
 }
 
 
@@ -427,8 +449,17 @@ void ERROR_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = ERROR_STATE;
 
-	// TODO: evaluate if it is correct to stop all output actions here...maybe not
+	// TODO: we need to open a led to indicate the Error State !!!
+
+	// reset all actuator states
+	MyOutputs->BUpShiftPortState = 0;
+	MyOutputs->BDnShiftPortState = 0;
+
+	// reset all control variables for the next actuation
+	//MyOutputs->xClutchTarget = xCLUTCH_FULLY_ENGAGED;
 	// clutch should always work... if we enter here during an actuation, not sure if it is correct to interrupt it
+	MyOutputs->BSparkCut = 0;
+
 }
 
 void ERROR_Exit(void) {
@@ -448,6 +479,8 @@ void ERROR_Event(void) {
 	// check that all control errors are cleared
 	// and do not zero the logged error status
 	// remember return in all functions
+
+	// Remember to create the Strategy (and a way to exit the error) to be able to function without NGear (complete open loop)
 }
 void ERROR_Run(void) {
 

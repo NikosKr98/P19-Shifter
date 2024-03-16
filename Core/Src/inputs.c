@@ -137,11 +137,9 @@ void ReadInputs(InputStruct *inputs){
 
 	if((tCANSteeringWheelLastSeen + STEERING_WHEEL_FITTED_INTERVAL) < tInputsTimmer) {
 		inputs->BSteeringWheelFitted = 0;
-		RaiseFault(inputs, STEERING_WHEEL_FAULT);
 	}
 	else {
 		inputs->BSteeringWheelFitted = 1;
-		ClearFault(inputs, STEERING_WHEEL_FAULT);
 	}
 
 	// ---------------------------------------------------------------------------------------------------
@@ -318,12 +316,10 @@ void ReadInputs(InputStruct *inputs){
 		inputs->BnEngineInError = 1;
 		inputs->BnEngineReliable = 0;
 		inputs->nEngine = 0; 		// we force to zero if in error
-//			RaiseFault(inputs, ECU_COMMS_FAULT); // TODO: we temporarily comment if for testing without the ECU
 	}
 	else {
 		inputs->BnEngineInError = 0;
 		inputs->BnEngineReliable = 1;
-		ClearFault(inputs, ECU_COMMS_FAULT);
 	}
 
 	inputs->nEngine = nEngineRawCAN; // TODO: conversion??
