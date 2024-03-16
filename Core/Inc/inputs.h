@@ -10,13 +10,14 @@
 
 #include <Utils.h>
 
-// ANALOG
+// ADC
 #define ADC_BUFFER_SIZE 						2192*2	// is the size of the buffer, 2 times the samples needed for 1 cycle
 #define ADC_BUFFER_HALF_SIZE 					ADC_BUFFER_SIZE/2 // we use it to not do the division in run time
 #define ADC_NUMBER_OF_CHANNELS					8
 
-#define VSUPPLY_DIVIDER_GAIN					0.23077f
-
+// ANALOGS
+#define MCU_SUPPLY_VOLTAGE						3.34f
+#define VSUPPLY_DIVIDER_GAIN					0.23056f
 #define VUPDN_NOPRESS							3.2f	// the voltage level above which we consider both buttons not pressed
 #define VUPDN_UPSHIFT_MAX						1.2f	// max limit to consider upshift pressed
 #define VUPDN_UPSHIFT_MIN						1.0f	// min limit to consider upshift pressed
@@ -24,9 +25,6 @@
 #define VUPDN_DNSHIFT_MIN						2.0f	// min limit to consider dnshift pressed
 #define VUPDN_BOTHPRESSED_MAX					0.95f	// max limit to consider both buttons pressed
 #define VUPDN_BOTHPRESSED_MIN					0.93f	// min limit to consider both buttons pressed
-
-// DIGITAL
-#define DIN_DEBOUNCING							20		// ms of debouncing for digital inputs
 
 // GEAR
 #define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
@@ -38,13 +36,15 @@
 #define CLUTCH_PADDLE_RELEASED_THRESHOLD		0		// Threshold % to consider Clutch Paddle as released
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
 #define CLUTCH_PADDLE_MAX 						100		// max clutch paddle percentage
-#define VrCLUTCH_MARGIN_MIN 					0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
-#define VrCLUTCH_MARGIN_MAX 					0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define VrCLUTCH_PADDLE_MARGIN_MIN 				0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VrCLUTCH_PADDLE_MARGIN_MAX 				0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define rCLUTCH_ON_DECLUTCH						100		// the desired clutch percentage when pressing the delutch button
 
 // TOGGLE SWITCHES
 #define TOGGLE_SWITCH_DEBOUNCE					1000	// time interval for next toggle
 
+// DRIVER KILL
+#define DRIVER_KILL_DEBOUNCE					200		// debouncing for digital read
 // ENGINE RPM
 #define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
 // CAN
@@ -122,15 +122,12 @@ typedef struct _InputStruct {
 	uint8_t NSHIFTERDIN02;
 	uint8_t NSHIFTERDIN03;
 	uint8_t NSHIFTERDIN04;
-	uint32_t tDigitalInputs;
 
 	// GEAR
 	uint8_t BNGearInError;					// error flag for NGear
 	float VNGear;							// the voltage of the gear potentiometer
 	float NGearRaw;							// raw gear value interpolated from the NGear 2D map
 	uint8_t NGear;							// actual gear based on filtered gear potentiometer voltage and conditioned value
-
-	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
 
 	// Shift Inputs
 	uint8_t BUpShiftButtonCANInError;		// 1 if steering wheel CAN UpShift button is in Error
@@ -173,7 +170,7 @@ typedef struct _InputStruct {
 
 	// DECLUTCH
 	uint8_t BDeclutchRequestInError;		// 1 if steering wheel CAN is in error or not fitted
-	uint8_t BDeclutchRequest;				// Declutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
+	uint8_t BDeclutchRequest;				// De-Clutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
 
 	// Toggle Switches
 	uint8_t NToggleSwitch01State;
@@ -181,17 +178,20 @@ typedef struct _InputStruct {
 	uint8_t NToggleSwitch03State;
 	uint8_t NToggleSwitch04State;
 
+	// Driver Kill (Shutdown)
+	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
+
 	// ECU
-	uint8_t BnEngineInError;		// flag to determine that the Engine rpm are not reliable
-	uint8_t BnEngineReliable;		// 1 if the ECU message arrives correctly and the measurement is reliable
-	int16_t nEngine;				// engine RPM taken from the ECU
+	uint8_t BnEngineInError;				// flag to determine that the Engine rpm are not reliable
+	uint8_t BnEngineReliable;				// 1 if the ECU message arrives correctly and the measurement is reliable
+	int16_t nEngine;						// engine RPM taken from the ECU
 
 	// CAN
-	uint8_t BSteeringWheelFitted;	// 1 if the SW is fitted and the SIU is communicating, otherwise 0
-	uint8_t NCANErrors;				// CAN Bus error count
-	uint8_t NCANRxErrors;			// CAN message receive error count
+	uint8_t BSteeringWheelFitted;			// 1 if the SW is fitted and the SIU is communicating, otherwise 0
+	uint8_t NCANErrors;						// CAN Bus error count
+	uint8_t NCANRxErrors;					// CAN message receive error count
 
-	float VSupply;					// PCB Voltage Input Diagnostic
+	float VSupply;							// PCB Voltage Input Diagnostic
 
 } InputStruct;
 

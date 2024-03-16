@@ -16,9 +16,10 @@
 // Timing variables
 uint32_t tInputsTimmer;
 uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
+uint32_t tBDriverKillTimer;
 
 // I/O Flags
-uint8_t BUpShiftRequested=0, BDnShiftRequested=0, BLaunchRequested=0, BDeclutchRequested=0, BClutchPaddlePressed=0;
+uint8_t BUpShiftRequested, BDnShiftRequested, BLaunchRequested, BDeclutchRequested, BClutchPaddlePressed;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
@@ -54,34 +55,30 @@ void ReadInputs(InputStruct *inputs){
 	//Analog Inputs
 
 	//ADC Averaging
-	inputs->NADCChannel01Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 0);
-	inputs->NADCChannel02Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 1);
-	inputs->NADCChannel03Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 2);
-	inputs->NADCChannel04Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 3);
-	inputs->NADCChannel05Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 5);
-	inputs->NADCChannel06Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 4);
-	inputs->NADCChannel07Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 7);
-	inputs->NADCChannel08Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 6);
+	inputs->NADCChannel01Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 0);	// PA0
+	inputs->NADCChannel02Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 1);	// PA1
+	inputs->NADCChannel03Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 2);	// PA2
+	inputs->NADCChannel04Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 3);	// PA3
+	inputs->NADCChannel05Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 5);	// PA5
+	inputs->NADCChannel06Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 4);	// PA4
+	inputs->NADCChannel07Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 7);	// PA7
+	inputs->NADCChannel08Raw = MyHalfBufferAverage(adcRawValue, ADC_BUFFER_HALF_SIZE, NAdcBufferSide, 6);	// PA7
 
 	//Voltage Conversion
-	inputs->VSHIFTERAnalog01 = (float)(inputs->NADCChannel01Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog02 = (float)(inputs->NADCChannel02Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog03 = (float)(inputs->NADCChannel03Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog04 = (float)(inputs->NADCChannel04Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog05 = (float)(inputs->NADCChannel05Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog06 = (float)(inputs->NADCChannel06Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog07 = (float)(inputs->NADCChannel07Raw * 3.3 / 4095.0);
-	inputs->VSHIFTERAnalog08 = (float)(inputs->NADCChannel08Raw * 3.3 / 4095.0);
+	inputs->VSHIFTERAnalog01 = (float)(inputs->NADCChannel01Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog02 = (float)(inputs->NADCChannel02Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog03 = (float)(inputs->NADCChannel03Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog04 = (float)(inputs->NADCChannel04Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog05 = (float)(inputs->NADCChannel05Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog06 = (float)(inputs->NADCChannel06Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog07 = (float)(inputs->NADCChannel07Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
+	inputs->VSHIFTERAnalog08 = (float)(inputs->NADCChannel08Raw * MCU_SUPPLY_VOLTAGE / 4095.0);
 
 	//Digital Inputs
-	if(inputs->tDigitalInputs < tInputsTimmer) {
-		inputs->NSHIFTERDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
-		inputs->NSHIFTERDIN02 = HAL_GPIO_ReadPin(DIN02_GPIO_Port, DIN02_Pin);
-		inputs->NSHIFTERDIN03 = HAL_GPIO_ReadPin(DIN03_GPIO_Port, DIN03_Pin);
-		inputs->NSHIFTERDIN04 = HAL_GPIO_ReadPin(DIN04_GPIO_Port, DIN04_Pin);
-
-		inputs->tDigitalInputs = tInputsTimmer + DIN_DEBOUNCING;
-	}
+	inputs->NSHIFTERDIN01 = HAL_GPIO_ReadPin(DIN01_GPIO_Port, DIN01_Pin);
+	inputs->NSHIFTERDIN02 = HAL_GPIO_ReadPin(DIN02_GPIO_Port, DIN02_Pin);
+	inputs->NSHIFTERDIN03 = HAL_GPIO_ReadPin(DIN03_GPIO_Port, DIN03_Pin);
+	inputs->NSHIFTERDIN04 = HAL_GPIO_ReadPin(DIN04_GPIO_Port, DIN04_Pin);
 
 	// Steering Wheel Buttons
 	inputs->BSWButtonA = BButtonACAN;
@@ -102,7 +99,14 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
-	inputs->BDriverKill = !inputs->NSHIFTERDIN04;	// inverted logic: 12V (1) Not Driver kill, 0V (0) Driver Kill
+		// Inverted logic!! DriverKill=1 means ShutDown is Open, DriverKill=0 means ShutDown is closed
+	if(inputs->NSHIFTERDIN04 & (tBDriverKillTimer < tInputsTimmer) && inputs->BDriverKill) {
+		inputs->BDriverKill = 0;
+		tBDriverKillTimer = tInputsTimmer + DRIVER_KILL_DEBOUNCE;
+	}
+	else if(!inputs->NSHIFTERDIN04 & !inputs->BDriverKill) {
+		inputs->BDriverKill = 1;
+	}
 
 	// ---------------------------------------------------------------------------------------------------
 	// NGear Conditioning
@@ -161,7 +165,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// Analog Input & Mapping
 	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog02;
-	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_MARGIN_MIN, VrCLUTCH_MARGIN_MAX);
+	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_PADDLE_MARGIN_MIN, VrCLUTCH_PADDLE_MARGIN_MAX);
 
 
 	// Clutch Paddle Input Strategy
@@ -302,7 +306,7 @@ void ReadInputs(InputStruct *inputs){
 	// ---------------------------------------------------------------------------------------------------
 	// PCB Supply Voltage Conditioning
 
-	inputs->VSupply = inputs->VSHIFTERAnalog01 * VSUPPLY_DIVIDER_GAIN;
+	inputs->VSupply = inputs->VSHIFTERAnalog01 / VSUPPLY_DIVIDER_GAIN;
 
 
 	// ---------------------------------------------------------------------------------------------------
