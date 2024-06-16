@@ -17,14 +17,14 @@
 
 // ANALOGS
 #define MCU_SUPPLY_VOLTAGE						3.34f
-#define VSUPPLY_DIVIDER_GAIN					0.23056f
-#define VUPDN_NOPRESS							3.2f	// the voltage level above which we consider both buttons not pressed
-#define VUPDN_UPSHIFT_MAX						1.2f	// max limit to consider upshift pressed
-#define VUPDN_UPSHIFT_MIN						1.0f	// min limit to consider upshift pressed
-#define VUPDN_DNSHIFT_MAX						2.2f	// max limit to consider dnshift pressed
-#define VUPDN_DNSHIFT_MIN						2.0f	// min limit to consider dnshift pressed
-#define VUPDN_BOTHPRESSED_MAX					0.95f	// max limit to consider both buttons pressed
-#define VUPDN_BOTHPRESSED_MIN					0.93f	// min limit to consider both buttons pressed
+#define VSUPPLY_DIVIDER_GAIN					0.22020f
+#define VUPDN_NOPRESS							2.5f	// the voltage level above which we consider both buttons not pressed
+#define VUPDN_UPSHIFT_MAX						1.1f	// max limit to consider upshift pressed
+#define VUPDN_UPSHIFT_MIN						0.95f	// min limit to consider upshift pressed
+#define VUPDN_DNSHIFT_MAX						1.9f	// max limit to consider dnshift pressed
+#define VUPDN_DNSHIFT_MIN						1.7f	// min limit to consider dnshift pressed
+#define VUPDN_BOTHPRESSED_MAX					0.90f	// max limit to consider both buttons pressed
+#define VUPDN_BOTHPRESSED_MIN					0.8f	// min limit to consider both buttons pressed
 
 // GEAR
 #define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
@@ -86,7 +86,8 @@ typedef enum _Fault {
 /* SIGNAL SOURCE  */
 typedef enum _SigSource {
 	CAN,
-	Analog
+	Analog,
+	NoSource
 } SignalSource;
 
 typedef struct _InputStruct {

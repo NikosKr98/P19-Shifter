@@ -23,7 +23,7 @@
 
 static const float NGearMap[2][TOTAL_GEARS] = {
 
-		/* In:  VNGear */	{0.403, 1.128, 1.894, 2.619, 2.981, 3.183},
+		/* In:  VNGear */	{0.461, 1.226, 2.210, 2.763, 3.022, 3.339},
 		/* Out: NGear  */	{  5,     4,     3,     2,     0,     1  }
 
 };
@@ -36,8 +36,8 @@ static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MA
 
 static const float rClutchMap[2][CLUTCH_PADDLE_MAP_SIZE] = {
 
-		/* In:  VrClutchPaddleRaw */	{		0.500			, 	 		3.000	 	},
-		/* Out: rClutchPaddle 	  */	{ CLUTCH_PADDLE_MAP_MIN ,  CLUTCH_PADDLE_MAP_MAX}
+		/* In:  VrClutchPaddleRaw */	{		1.400			, 	 		2.470       },
+		/* Out: rClutchPaddle 	  */	{ CLUTCH_PADDLE_MAP_MAX ,  CLUTCH_PADDLE_MAP_MIN}
 };
 
 static const uint16_t nEngineAntistallMap[TOTAL_GEARS-1] = { 	2000,	// 1st min rpm threshold (not needed for neutral gear)
@@ -80,10 +80,10 @@ static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS-1] = {	10000,		// 1st 
 
 
 static const uint32_t tUpShift[TOTAL_GEARS-1] = { 				100,	// neutral to 1st gear valve activation time (ms)
-																100,	// 1st to 2nd
-																100,	// 2nd to 3rd
-																100,	// 3rd to 4th
-																100,	// 4th to 5th
+																200,	// 1st to 2nd
+																200,	// 2nd to 3rd
+																200,	// 3rd to 4th
+																200,	// 4th to 5th
 };
 
 

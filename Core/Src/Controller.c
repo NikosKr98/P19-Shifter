@@ -338,7 +338,7 @@ void SHIFTING_Entry(void) {
 
 	}
 	else if(NPreviousState == PRE_DNSHIFT_STATE) {
-		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
+		tShifterMaxTransitTime = tDnShift[MyInputs->NGear - 1];
 		NShiftRequest = Down;
 
 		if(MyOutputs->NGearTarget == 0) {		// if going from 1st to neutral we need to actually upshift (it is how the gears work)

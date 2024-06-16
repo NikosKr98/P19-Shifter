@@ -180,6 +180,7 @@ void ReadInputs(InputStruct *inputs){
 	}
 	else {
 		inputs->BrClutchPaddleInError = 1;
+		inputs->NrClutchPaddleSource = NoSource;
 		rClutchPaddleRaw = rCLUTCH_PADDLE_IN_ERROR_DEFAULT;
 	}
 
@@ -242,6 +243,7 @@ void ReadInputs(InputStruct *inputs){
 	else {
 		inputs->BUpShiftRequestInError = 1;
 		inputs->BUpShiftRequest = 0;		// we force to zero if in error
+		inputs->NBUpshiftRequestSource = NoSource;
 	}
 
 	// DnShift Input Strategy
@@ -258,6 +260,7 @@ void ReadInputs(InputStruct *inputs){
 	else {
 		inputs->BDnShiftRequestInError = 1;
 		inputs->BDnShiftRequest = 0;		// we force to zero if in error
+		inputs->NBDnshiftRequestSource = NoSource;
 	}
 
 	// ---------------------------------------------------------------------------------------------------

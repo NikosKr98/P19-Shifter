@@ -67,8 +67,8 @@ void WriteOutputs(OutputStruct *output) {
 
 	// Shifting Ports
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
-	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BUpShiftPortState);
-	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BUpShiftPortState);
+	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BDnShiftPortState);
 
 
 	// Toggle Switches
