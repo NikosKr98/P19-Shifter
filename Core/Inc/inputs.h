@@ -25,10 +25,12 @@
 #define VUPDN_DNSHIFT_MIN						1.7f	// min limit to consider dnshift pressed
 #define VUPDN_BOTHPRESSED_MAX					0.90f	// max limit to consider both buttons pressed
 #define VUPDN_BOTHPRESSED_MIN					0.8f	// min limit to consider both buttons pressed
+#define VUPDN_DEBOUNCE							50		// debounce time for analog reading
 
 // GEAR
-#define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
-#define VNGEAR_MARGIN_MAX 						0.2f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define NGEAR_INERROR_DEFAULT					1		// default value when the gear input is in error
+#define VNGEAR_MARGIN_MIN 						0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VNGEAR_MARGIN_MAX 						0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define FALSE_NEUTRAL_DEBOUNCE					40		// time to leave before detecting and declaring a false neutral
 
 // CLUTCH
@@ -81,12 +83,6 @@ typedef enum _Event {
 	CLUTCH_PADDLE_RELEASE_EVT
 } Event;
 
-
-/* FAULT DEFINITION */
-typedef enum _Fault {
-	NGEAR_FAULT,
-} Fault;
-
 /* SIGNAL SOURCE  */
 typedef enum _SigSource {
 	CAN,
@@ -97,7 +93,6 @@ typedef enum _SigSource {
 typedef struct _InputStruct {
 
 	uint32_t nEventStatus; 			// 32-bit bitfield for events
-	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
 
 	// Analog Inputs
 	float VSHIFTERAnalog01;
@@ -201,12 +196,11 @@ typedef struct _InputStruct {
 
 	float VSupply;							// PCB Voltage Input Diagnostic
 
+	uint16_t NInputsErrorWord;				// bit word for all input InError variables
 
-	uint16_t InputsErrorWord;				// bitword for all input InError variables
 } InputStruct;
 
 void InitInputs(void);
 void ReadInputs(InputStruct *input);
-uint8_t CheckFaults(InputStruct *inputs);
 
 #endif /* INC_INPUTS_H_ */

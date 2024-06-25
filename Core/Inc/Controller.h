@@ -69,9 +69,9 @@
 #define MULTIFUNCTION14_DEF_POS				1
 
 // Wrapping Enable
-#define MULTIFUNCTION01_WRAP				1		// 1 to enable wrapping of the each map
-#define MULTIFUNCTION02_WRAP				1
-#define MULTIFUNCTION03_WRAP				1
+#define MULTIFUNCTION01_WRAP				0		// 1 to enable wrapping of the each map
+#define MULTIFUNCTION02_WRAP				0
+#define MULTIFUNCTION03_WRAP				0
 #define MULTIFUNCTION04_WRAP				1
 #define MULTIFUNCTION05_WRAP				1
 #define MULTIFUNCTION06_WRAP				1
@@ -85,25 +85,28 @@
 #define MULTIFUNCTION14_WRAP				1
 
 // Max position
-#define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map
+#define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map (select value = 0 to deactivate the map)
 #define MULTIFUNCTION02_MAX_POS				14
 #define MULTIFUNCTION03_MAX_POS				14
 #define MULTIFUNCTION04_MAX_POS				14
 #define MULTIFUNCTION05_MAX_POS				14
-#define MULTIFUNCTION06_MAX_POS				14
-#define MULTIFUNCTION07_MAX_POS				14
+#define MULTIFUNCTION06_MAX_POS				0
+#define MULTIFUNCTION07_MAX_POS				0
 #define MULTIFUNCTION08_MAX_POS				2
 #define MULTIFUNCTION09_MAX_POS				14
 #define MULTIFUNCTION10_MAX_POS				14
 #define MULTIFUNCTION11_MAX_POS				14
 #define MULTIFUNCTION12_MAX_POS				14
 #define MULTIFUNCTION13_MAX_POS				14
-#define MULTIFUNCTION14_MAX_POS				14
+#define MULTIFUNCTION14_MAX_POS				0
+
+// functions association
+#define MULTIFUNCTION_CLUTCH_RELEASE_IDX	3	// map 3 (starting from 1) is the one associated to the clutch release maps
 
 // DISPLAY
 #define DISPLAY_MAX_PAGE					5		// the maximum page number we have in the screen, not the index
 #define DISPLAY_PAGE_DEBOUNCE				300		// debounce time for consecutive page changes
-
+#define CONTROLLER_STATUS_SHADOW_REFRESH	1000	// the time we accumulate all controller errors before zeroing them (for display reasons)
 
 // STATE MACHINE STATES
 typedef enum _States {
@@ -145,8 +148,9 @@ typedef enum _AntistallState{
 
 typedef struct {
 
-	ControlError NControlErrorStatus;
-	ControlError NControlErrorStatusLogged;
+	ControlError NControlErrorStatus;		// bit word of the various controller errors
+	ControlError NControlErrorStatusShadow;	// it gets used for the diagnostics and thud gets zeroed after 1 second, in order to be able to see the various errors
+	ControlError NControlErrorStatusLogged;	// it keeps the last error seen
 
 	// GEAR
 	uint8_t NGear;							// the current gear (copy from input struct)
@@ -159,15 +163,16 @@ typedef struct {
 	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
 	uint16_t xClutchBitepoint;				// the clutch bite point
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated
+	uint8_t NxClutchReleaseMapIdx;			// the index for the clutch release maps
 
 	// SHIFTER
 	uint8_t BUpShiftPortState;				// 1 when the UpShift port is being actuated
 	uint8_t BDnShiftPortState;				// 1 when the DownShift port is being actuated
 	uint32_t tLastUpShiftTransitTime_us;	// the time it actually took to shift the gear Up in the last actuation (for performance measurement)
 	uint32_t tLastDnShiftTransitTime_us;	// the time it actually took to shift the gear Dn in the last actuation (for performance measurement)
-	uint16_t NTotalShifts;					// total number of shifts done since powerup
+	uint16_t NTotalShifts;					// total number of shifts done since power up
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
-	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift //TODO: integrate it in the controller code
+	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift
 
 	// Steering Wheel LED Demands
 	uint8_t BSWLEDA;
@@ -195,7 +200,7 @@ typedef struct {
 	uint8_t BMultifunctionWrap[NMF];		// if it contains 1 we allow the overflow of the map (from last we go to first with next button pressed)
 	uint8_t NMultifunctionMaxPos[NMF];		// the size of each map, used for wrapping and general control
 
-	uint32_t tMultifunctionActiveOnRot;		// the time the screen shows the multifunction map position and value & the time the SW buttons function as +/- instead of dispaly page control
+	uint32_t tMultifunctionActiveOnRot;		// the time the screen shows the multifunction map position and value & the time the SW buttons function as +/- instead of display page control
 	uint8_t BUseButtonsForMultifunction;	// a flag to indicate the use of the +/- buttons for multifunction and display page control
 
 	// ECU
@@ -203,15 +208,15 @@ typedef struct {
 	uint8_t BLaunchControl;					// flag to send to the ECU for launch control
 
 	// STRATEGIES
-	uint8_t BOverrideActuateClutchOnUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
-	uint8_t BOverrideActuateClutchOnDnShift;	// if one it will actuate the clutch on the next DnShift, then it gets automatically disabled
-	AntistallState NAntistallState;				// the state of the antistall strategy
+	uint8_t BOverrideActuateClutchOnNextUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
+	uint8_t BOverrideActuateClutchOnNextDnShift;	// if one it will actuate the clutch on the next DnShift, then it gets automatically disabled
+	AntistallState NAntistallState;			// the state of the antistall strategy
 
 	// PID Control
 	uint8_t BPIDRunning;					// 1 when the PID controller is running
 	uint8_t BPIDTimeout;					// 1 if the PID controller did not manage to reach the target before the timeout
 
-	uint32_t NErrorWord;						// contains the input bit errors and ??
+	uint32_t NErrorWord;					// contains the input bit errors ( 2 MSB ) and the controller errors ( 2 LSB )
 
 }OutputStruct;
 

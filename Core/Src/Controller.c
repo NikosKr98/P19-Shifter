@@ -18,12 +18,12 @@ Shifts NShiftRequest;
 uint8_t NMultifunctionActiveSwitchPrev, NMFIdx;
 
 // timing variables
-uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer;
+uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer, tControllerErrorStatusShadow;
 
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
 
-#define RaiseControlError(fault_) {do{ MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = fault_; }while(0);}
+#define RaiseControlError(fault_) {do{ MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = fault_; MyOutputs->NControlErrorStatusShadow |= MyOutputs->NControlErrorStatus; }while(0);}
 #define ClearControlError(fault_) MyOutputs->NControlErrorStatus &= ~(1 << (uint32_t)(fault_))
 #define CheckControlError(fault_) (MyOutputs->NControlErrorStatus >> (uint32_t)(fault_)) & 0x1
 
@@ -106,6 +106,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// ANTISTALL
+
 		#ifdef ANTISTALL_ENABLED
 
 			// if the shut down is activated and we are at gear greater than neutral we can enter
@@ -155,6 +156,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			if(CheckEvent(DECLUTCH_RELEASE_EVT)) {
 				// TODO: run the release array. here we initialize it
 				// create lookup table running request for accel and emergency clutchButton release
+				// xClutchReleaseMap[MyOutputs->NxClutchReleaseMapIdx][0..1..2..3....]
 			}
 			// TODO: Here we keep timers and counter and the state of the mini control and put the values in xClutchTargetManual
 		}
@@ -170,6 +172,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// TOGGLE SWITCHES & LEDS
+
 		MyOutputs->BSWLEDA = MyInputs->NToggleSwitch01State;
 		MyOutputs->BSWLEDB = MyInputs->NToggleSwitch02State;
 		MyOutputs->BSWLEDC = MyInputs->NToggleSwitch03State;
@@ -190,7 +193,6 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->BUseButtonsForMultifunction = 1;
 			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
 		}
-
 
 		// + Button (next position)
 		if(MyOutputs->BMultifunctionNextPos && (MyOutputs->tMultifunctionActiveOnRot >= tControllerTimmer || ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) && !MyOutputs->BMultifunctionNextPosState) {
@@ -226,6 +228,12 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer) {
 			MyOutputs->BUseButtonsForMultifunction = 0;
 		}
+
+
+		// Here we assign the various multifunction maps to the various indexes
+		MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_IDX-1];
+		// TODO: fill the rest...
+
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -299,15 +307,24 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	// SHIFTER STATE MACHINE
+	// ERRORs
+
+		// we reset the word
+		MyOutputs->NErrorWord = 0;
 
 		// we copy the input errors to be displayed in the screen
-		MyOutputs->NErrorWord = (MyInputs->InputsErrorWord) << 16;
+		MyOutputs->NErrorWord |= (uint32_t)(MyInputs->NInputsErrorWord) << 16;
 
-		// TODO: in the 16 LSBs include
-		// false neutral
-		// other controller errors that are useful for the driver like rejected shifts
-		// antistall until it gets deactivated
+		MyOutputs->NErrorWord |= MyInputs->BFalseNeutral 					<<0;
+		MyOutputs->NErrorWord |= (MyOutputs->NAntistallState == 2 ? 1 : 0)	<<1;
+
+
+		MyOutputs->NErrorWord |= (MyOutputs->NControlErrorStatusShadow >> 1) && 0x3fff <<2;	// the controller errors (without the first which is "No error"), taken only the 14 first bits out of the 32
+
+		if(tControllerErrorStatusShadow < tControllerTimmer) {
+			tControllerErrorStatusShadow = tControllerTimmer + CONTROLLER_STATUS_SHADOW_REFRESH;
+			MyOutputs->NControlErrorStatusShadow = 0;
+		}
 
 }
 
@@ -319,14 +336,6 @@ void IDLE_Exit(void) {
 
 }
 void IDLE_Event(void) {
-
-	if(CheckFaults(MyInputs)) {
-		IDLE_Exit();
-		ERROR_Entry();
-		return;
-	}
-
-	// TODO: do we need to also check controller errors here? I think no...
 
     if(CheckEvent(UPSHIFT_PRESS_EVT)) {
         IDLE_Exit();
@@ -366,19 +375,13 @@ void PRE_UPSHIFT_Exit(void) {
 }
 void PRE_UPSHIFT_Event(void) {
 
-	if(CheckFaults(MyInputs)) {
-		PRE_UPSHIFT_Exit();
-		ERROR_Entry();
-		return;
-	}
-
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear + 1;											// we go to the next gear
 
-		if(CLUTCH_ACTUATION_DURING_UPSHIFT || MyOutputs->BOverrideActuateClutchOnUpShift) {		// we check for clutch strategy during shift
+		if(CLUTCH_ACTUATION_DURING_UPSHIFT || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShift = xClutchTargetUpShiftMap[MyInputs->NGear];
-			MyOutputs->BOverrideActuateClutchOnUpShift = 0; 									// reset the strat for the next gear
+			MyOutputs->BOverrideActuateClutchOnNextUpShift = 0; 									// reset the strat for the next gear
 		}
 		else {
 			MyOutputs->xClutchTargetShift = 0;
@@ -438,19 +441,13 @@ void PRE_DNSHIFT_Exit(void) {
 }
 void PRE_DNSHIFT_Event(void) {
 
-	if(CheckFaults(MyInputs)) {
-		PRE_DNSHIFT_Exit();
-		ERROR_Entry();
-		return;
-	}
-
 	// if all ok we define the shifting targets and move on
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
 
-		if(CLUTCH_ACTUATION_DURING_DNSHIFT || MyOutputs->BOverrideActuateClutchOnDnShift) {		// we check for clutch strategy during shift
+		if(CLUTCH_ACTUATION_DURING_DNSHIFT || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyInputs->NGear];
-			MyOutputs->BOverrideActuateClutchOnDnShift = 0; 									// reset the strat for the next gear
+			MyOutputs->BOverrideActuateClutchOnNextDnShift = 0; 									// reset the strat for the next gear
 		}
 		else {
 			MyOutputs->xClutchTargetShift = 0;
@@ -534,11 +531,6 @@ void SHIFTING_Exit(void) {
 }
 void SHIFTING_Event(void) {
 
-	if(CheckFaults(MyInputs)) {
-		SHIFTING_Exit();
-		ERROR_Entry();
-		return;
-	}
 
 	// TODO: keep checking for control errors ??
 
@@ -583,12 +575,6 @@ void POSTSHIFT_Exit(void) {
 }
 void POSTSHIFT_Event(void) {
 
-	if(CheckFaults(MyInputs)) {
-		SHIFTING_Exit();
-		ERROR_Entry();
-		return;
-	}
-
 
 	if(!MyOutputs->NControlErrorStatus) {
 		// we update the Gear variable for the outputs
@@ -632,10 +618,6 @@ void ERROR_Entry(void) {
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
 	MyOutputs->xClutchTargetShift = 0;
-
-	// reset all control variables for the next actuation
-	//MyOutputs->xClutchTarget = xCLUTCH_FULLY_ENGAGED;
-	// clutch should always work... if we enter here during an actuation, not sure if it is correct to interrupt it
 	MyOutputs->BSparkCut = 0;
 
 }
@@ -645,12 +627,6 @@ void ERROR_Exit(void) {
 }
 void ERROR_Event(void) {
 
-	// check that all faults are cleared
-	if(!CheckFaults(MyInputs)) {
-		ERROR_Exit();
-		IDLE_Entry();
-		return;
-	}
 		// for some faults that are very critical we could make a counter and when it expires we declare a default hardcoded value to be able to move on
 	// TODO: it must not be completely blocking to be able to comeback from an error.
 	// the concept is to keep a counter for the number of errors of each type and after a certain point come back and continue normal running with less features
