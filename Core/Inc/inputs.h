@@ -29,6 +29,7 @@
 // GEAR
 #define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
 #define VNGEAR_MARGIN_MAX 						0.2f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define FALSE_NEUTRAL_DEBOUNCE					40		// time to leave before detecting and declaring a false neutral
 
 // CLUTCH
 #define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if evey input is in error
@@ -42,6 +43,9 @@
 
 // TOGGLE SWITCHES
 #define TOGGLE_SWITCH_DEBOUNCE					1000	// time interval for next toggle
+
+// Rotary Switch
+#define VNSWITCH_MARGIN							0.1f	// the voltage above and below the map voltage we accept to arrive before declaring out of bounds
 
 // DRIVER KILL
 #define DRIVER_KILL_DEBOUNCE					200		// debouncing for digital read
@@ -125,6 +129,7 @@ typedef struct _InputStruct {
 	float VNGear;							// the voltage of the gear potentiometer
 	float NGearRaw;							// raw gear value interpolated from the NGear 2D map
 	uint8_t NGear;							// actual gear based on filtered gear potentiometer voltage and conditioned value
+	uint8_t BFalseNeutral;					// flag to indicate that the gear is not engaged properly and we are between 2 gears
 
 	// Shift Inputs
 	uint8_t BUpShiftButtonCANInError;		// 1 if steering wheel CAN UpShift button is in Error
@@ -175,6 +180,12 @@ typedef struct _InputStruct {
 	uint8_t NToggleSwitch03State;
 	uint8_t NToggleSwitch04State;
 
+	// Rotary Switch
+	float VSwhitchA;						// the voltage of the rotary Switch A
+	float NSwitchARaw;						// the raw switch value, with decimals interpolated from the switch map
+	uint8_t NSwitchA;						// the integer switch value
+	uint8_t BNSwitchAInError;				// error flag when the measured voltage is out of range
+
 	// Driver Kill (Shutdown)
 	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
 
@@ -190,6 +201,8 @@ typedef struct _InputStruct {
 
 	float VSupply;							// PCB Voltage Input Diagnostic
 
+
+	uint16_t InputsErrorWord;				// bitword for all input InError variables
 } InputStruct;
 
 void InitInputs(void);

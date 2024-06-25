@@ -20,8 +20,11 @@
 #define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
 #define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
 #define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
+#define ALLOW_GEARS_WITH_CAR_STOPPED		1		// we allow changing gear with the car stopped and the clutch paddle pressed
 
 #define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
+
+#define ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME	0		// allow the use of +/- buttons all the times with no need or the rotary to turn first. This strategy deactivates the screen page function
 
 // ANTISTALL
 #define ANTISTALL_ENABLED					1		// antistall enable strategy
@@ -45,6 +48,61 @@
 #define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
 #define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
 
+// MULTIFUNCTION
+#define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
+#define MULTIFUNCTION_ACTIVE_TIME			2000	// the time the display shows the map position and value and the buttons work as +/-
+
+// Default position
+#define MULTIFUNCTION01_DEF_POS				1		// the default positions of the maps on power up
+#define MULTIFUNCTION02_DEF_POS				1
+#define MULTIFUNCTION03_DEF_POS				1
+#define MULTIFUNCTION04_DEF_POS				1
+#define MULTIFUNCTION05_DEF_POS				1
+#define MULTIFUNCTION06_DEF_POS				1
+#define MULTIFUNCTION07_DEF_POS				1
+#define MULTIFUNCTION08_DEF_POS				1
+#define MULTIFUNCTION09_DEF_POS				1
+#define MULTIFUNCTION10_DEF_POS				1
+#define MULTIFUNCTION11_DEF_POS				1
+#define MULTIFUNCTION12_DEF_POS				1
+#define MULTIFUNCTION13_DEF_POS				1
+#define MULTIFUNCTION14_DEF_POS				1
+
+// Wrapping Enable
+#define MULTIFUNCTION01_WRAP				1		// 1 to enable wrapping of the each map
+#define MULTIFUNCTION02_WRAP				1
+#define MULTIFUNCTION03_WRAP				1
+#define MULTIFUNCTION04_WRAP				1
+#define MULTIFUNCTION05_WRAP				1
+#define MULTIFUNCTION06_WRAP				1
+#define MULTIFUNCTION07_WRAP				1
+#define MULTIFUNCTION08_WRAP				1
+#define MULTIFUNCTION09_WRAP				1
+#define MULTIFUNCTION10_WRAP				1
+#define MULTIFUNCTION11_WRAP				1
+#define MULTIFUNCTION12_WRAP				1
+#define MULTIFUNCTION13_WRAP				1
+#define MULTIFUNCTION14_WRAP				1
+
+// Max position
+#define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map
+#define MULTIFUNCTION02_MAX_POS				14
+#define MULTIFUNCTION03_MAX_POS				14
+#define MULTIFUNCTION04_MAX_POS				14
+#define MULTIFUNCTION05_MAX_POS				14
+#define MULTIFUNCTION06_MAX_POS				14
+#define MULTIFUNCTION07_MAX_POS				14
+#define MULTIFUNCTION08_MAX_POS				2
+#define MULTIFUNCTION09_MAX_POS				14
+#define MULTIFUNCTION10_MAX_POS				14
+#define MULTIFUNCTION11_MAX_POS				14
+#define MULTIFUNCTION12_MAX_POS				14
+#define MULTIFUNCTION13_MAX_POS				14
+#define MULTIFUNCTION14_MAX_POS				14
+
+// DISPLAY
+#define DISPLAY_MAX_PAGE					5		// the maximum page number we have in the screen, not the index
+#define DISPLAY_PAGE_DEBOUNCE				300		// debounce time for consecutive page changes
 
 
 // STATE MACHINE STATES
@@ -68,7 +126,8 @@ typedef enum _ControlError {
 	RPM_ILLEGAL_FOR_DNSHIFT,
 	TARGET_GEAR_LESS_THAN_NEUTRAL,
 	SHIFT_TARGET_UNKNOWN,
-	GEAR_TARGET_MISMATCH
+	GEAR_TARGET_MISMATCH,
+	FALSE_NEUTRAL_WITH_NO_CLUTCH
 }ControlError;
 
 typedef enum _Shifts{
@@ -108,12 +167,36 @@ typedef struct {
 	uint32_t tLastDnShiftTransitTime_us;	// the time it actually took to shift the gear Dn in the last actuation (for performance measurement)
 	uint16_t NTotalShifts;					// total number of shifts done since powerup
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
+	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift //TODO: integrate it in the controller code
 
 	// Steering Wheel LED Demands
 	uint8_t BSWLEDA;
 	uint8_t BSWLEDB;
 	uint8_t BSWLEDC;
 	uint8_t BSWLEDD;
+
+	// Display Buttons & control
+	int8_t NDispalyPage;					// the currently selected display page
+	uint8_t BDisplayPageNext;				// the button state from the input structure
+	uint8_t BDisplayPagePrev;				// the button state from the input structure
+	uint8_t BDisplayPageNextState;			// the state of the Next page button for control reasons
+	uint8_t BDisplayPagePrevState;			// the state of the Prev page button for control reasons
+	uint32_t tDisplayPageDebounce;			// timer for display control debouncing
+
+	// Multifunction
+	uint8_t NMultifunctionActiveSwitch;		// copy of NSwitchA from inputs
+	uint8_t BMultifunctionNextPos;			// the button state from the input structure
+	uint8_t BMultifunctionPrevPos;			// the button state from the input structure
+	uint8_t BMultifunctionNextPosState;		// the state of the Next page button for control reasons
+	uint8_t BMultifunctionPrevPosState;		// the state of the Next page button for control reasons
+
+	uint8_t NMultifunctionDefMask[NMF];		// the default values of the multifunction on power up
+	int8_t NMultifunction[NMF];				// the currently selected values for each map
+	uint8_t BMultifunctionWrap[NMF];		// if it contains 1 we allow the overflow of the map (from last we go to first with next button pressed)
+	uint8_t NMultifunctionMaxPos[NMF];		// the size of each map, used for wrapping and general control
+
+	uint32_t tMultifunctionActiveOnRot;		// the time the screen shows the multifunction map position and value & the time the SW buttons function as +/- instead of dispaly page control
+	uint8_t BUseButtonsForMultifunction;	// a flag to indicate the use of the +/- buttons for multifunction and display page control
 
 	// ECU
 	uint8_t BSparkCut;						// flag to send to the ECU for spark cutting
@@ -127,6 +210,8 @@ typedef struct {
 	// PID Control
 	uint8_t BPIDRunning;					// 1 when the PID controller is running
 	uint8_t BPIDTimeout;					// 1 if the PID controller did not manage to reach the target before the timeout
+
+	uint32_t NErrorWord;						// contains the input bit errors and ??
 
 }OutputStruct;
 

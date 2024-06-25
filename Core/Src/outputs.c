@@ -60,12 +60,13 @@ void WriteOutputs(OutputStruct *output) {
 	// think about not putting the duty cycle at 50% but to try and fine tune the compare and autoreload.
 	// think about the auto preload function. It is now enabled, is it correct?
 	// update the Timer Registers, using the TIM_Exported_Macros
-//	__HAL_TIM_SET_PRESCALER(&htim1, nTimerPrescaler - 1);
+	//__HAL_TIM_SET_PRESCALER(&htim1, nTimerPrescaler - 1);
 	__HAL_TIM_SET_AUTORELOAD(&htim1, xClutchTargetOut -1 );
 	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, xClutchTargetOut/2);
 
 
-	// Shifting Ports
+	// Shifting
+
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
 	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BUpShiftPortState);
 	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BDnShiftPortState);
@@ -75,9 +76,14 @@ void WriteOutputs(OutputStruct *output) {
 	// output->BSWLEDA
 
 
+	// ECU control
+
+
 	// CAN
 	// add the info of the shutDown (DriverKill) in the CAN for others to see
-	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF
+	// use the output->BUseButtonsForMultifunction to pop up the message for the multifunction in the screen
+	// send the display index (remember it is already 0-based)
+	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF, in order to have also the flashing action?
 }
 
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {

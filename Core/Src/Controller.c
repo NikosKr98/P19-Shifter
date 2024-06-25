@@ -13,10 +13,9 @@ InputStruct *MyInputs;
 OutputStruct *MyOutputs;
 
 States NCurrentState, NPreviousState;
-
 Shifts NShiftRequest;
 
-
+uint8_t NMultifunctionActiveSwitchPrev, NMFIdx;
 
 // timing variables
 uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer;
@@ -36,6 +35,65 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 
 	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;
 
+
+	// Multifunction
+
+	// default values
+	outputs->NMultifunctionDefMask[0] = MULTIFUNCTION01_DEF_POS;
+	outputs->NMultifunctionDefMask[1] = MULTIFUNCTION02_DEF_POS;
+	outputs->NMultifunctionDefMask[2] = MULTIFUNCTION03_DEF_POS;
+	outputs->NMultifunctionDefMask[3] = MULTIFUNCTION04_DEF_POS;
+	outputs->NMultifunctionDefMask[4] = MULTIFUNCTION05_DEF_POS;
+	outputs->NMultifunctionDefMask[5] = MULTIFUNCTION06_DEF_POS;
+	outputs->NMultifunctionDefMask[6] = MULTIFUNCTION07_DEF_POS;
+	outputs->NMultifunctionDefMask[7] = MULTIFUNCTION08_DEF_POS;
+	outputs->NMultifunctionDefMask[8] = MULTIFUNCTION09_DEF_POS;
+	outputs->NMultifunctionDefMask[9] = MULTIFUNCTION10_DEF_POS;
+	outputs->NMultifunctionDefMask[10] = MULTIFUNCTION11_DEF_POS;
+	outputs->NMultifunctionDefMask[11] = MULTIFUNCTION12_DEF_POS;
+	outputs->NMultifunctionDefMask[12] = MULTIFUNCTION13_DEF_POS;
+	outputs->NMultifunctionDefMask[13] = MULTIFUNCTION13_DEF_POS;
+
+	// wrapping
+	outputs->BMultifunctionWrap[0] = MULTIFUNCTION01_WRAP;
+	outputs->BMultifunctionWrap[1] = MULTIFUNCTION02_WRAP;
+	outputs->BMultifunctionWrap[2] = MULTIFUNCTION03_WRAP;
+	outputs->BMultifunctionWrap[3] = MULTIFUNCTION04_WRAP;
+	outputs->BMultifunctionWrap[4] = MULTIFUNCTION05_WRAP;
+	outputs->BMultifunctionWrap[5] = MULTIFUNCTION06_WRAP;
+	outputs->BMultifunctionWrap[6] = MULTIFUNCTION07_WRAP;
+	outputs->BMultifunctionWrap[7] = MULTIFUNCTION08_WRAP;
+	outputs->BMultifunctionWrap[8] = MULTIFUNCTION09_WRAP;
+	outputs->BMultifunctionWrap[9] = MULTIFUNCTION10_WRAP;
+	outputs->BMultifunctionWrap[10] = MULTIFUNCTION11_WRAP;
+	outputs->BMultifunctionWrap[11] = MULTIFUNCTION12_WRAP;
+	outputs->BMultifunctionWrap[12] = MULTIFUNCTION13_WRAP;
+	outputs->BMultifunctionWrap[13] = MULTIFUNCTION13_WRAP;
+
+	// map map size
+	outputs->NMultifunctionMaxPos[0] = MULTIFUNCTION01_MAX_POS;
+	outputs->NMultifunctionMaxPos[1] = MULTIFUNCTION02_MAX_POS;
+	outputs->NMultifunctionMaxPos[2] = MULTIFUNCTION03_MAX_POS;
+	outputs->NMultifunctionMaxPos[3] = MULTIFUNCTION04_MAX_POS;
+	outputs->NMultifunctionMaxPos[4] = MULTIFUNCTION05_MAX_POS;
+	outputs->NMultifunctionMaxPos[5] = MULTIFUNCTION06_MAX_POS;
+	outputs->NMultifunctionMaxPos[6] = MULTIFUNCTION07_MAX_POS;
+	outputs->NMultifunctionMaxPos[7] = MULTIFUNCTION08_MAX_POS;
+	outputs->NMultifunctionMaxPos[8] = MULTIFUNCTION09_MAX_POS;
+	outputs->NMultifunctionMaxPos[9] = MULTIFUNCTION10_MAX_POS;
+	outputs->NMultifunctionMaxPos[10] = MULTIFUNCTION11_MAX_POS;
+	outputs->NMultifunctionMaxPos[11] = MULTIFUNCTION12_MAX_POS;
+	outputs->NMultifunctionMaxPos[12] = MULTIFUNCTION13_MAX_POS;
+	outputs->NMultifunctionMaxPos[13] = MULTIFUNCTION13_MAX_POS;
+
+	NMultifunctionActiveSwitchPrev = MyInputs->NSwitchA;
+
+	// set the current values to default
+	for(uint8_t i=0; i<NMF; i++) {
+		outputs->NMultifunction[i] = outputs->NMultifunctionMaxPos[i];
+	}
+
+
 	IDLE_Entry();
 }
 
@@ -51,7 +109,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		#ifdef ANTISTALL_ENABLED
 
 			// if the shut down is activated and we are at gear greater than neutral we can enter
-			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError) {
+			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftingInProgress && !MyInputs->BFalseNeutral) {
 
 				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
 					// Timer initialization of enable strategy
@@ -81,6 +139,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 				MyOutputs->NAntistallState = Off;
 				MyOutputs->xClutchTargetProtection = 0;
 			}
+
 		#endif
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -103,7 +162,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// TODO: do the array running thing also for the launch sequence.
 		// Decide if upshifts trigger will happen here, or we will be triggered in IDLE and start the clutch sequence here afterwards
 
-		// we take the maximum target generated from the Antistall/Protection strategy, the request
+		// we take the maximum target generated from the Antistall/Protection strategy, the one request
 		// from the driver and the shifter requests when enabled from the respective strategy
 		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
@@ -115,6 +174,95 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		MyOutputs->BSWLEDB = MyInputs->NToggleSwitch02State;
 		MyOutputs->BSWLEDC = MyInputs->NToggleSwitch03State;
 
+
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	// MULTIFUNCTION
+
+		// inputs
+		MyOutputs->NMultifunctionActiveSwitch = MyInputs->NSwitchA;
+		MyOutputs->BMultifunctionNextPos = MyInputs->BSWButtonD;
+		MyOutputs->BMultifunctionPrevPos = MyInputs->BSWButtonC;
+
+		if(MyOutputs->NMultifunctionActiveSwitch != NMultifunctionActiveSwitchPrev) {
+			NMultifunctionActiveSwitchPrev = MyOutputs->NMultifunctionActiveSwitch;
+			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
+			MyOutputs->BUseButtonsForMultifunction = 1;
+			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
+		}
+
+
+		// + Button (next position)
+		if(MyOutputs->BMultifunctionNextPos && (MyOutputs->tMultifunctionActiveOnRot >= tControllerTimmer || ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) && !MyOutputs->BMultifunctionNextPosState) {
+			MyOutputs->BMultifunctionNextPosState = 1;
+			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
+
+			if(MyOutputs->NMultifunction[NMFIdx] + 1 >= MyOutputs->NMultifunctionMaxPos[NMFIdx]) {
+				if(MyOutputs->BMultifunctionWrap[NMFIdx]) MyOutputs->NMultifunction[NMFIdx] = 0;
+			}
+			else {
+				MyOutputs->NMultifunction[NMFIdx] ++;
+			}
+		}
+		else if(!MyOutputs->BMultifunctionNextPos) {
+			MyOutputs->BMultifunctionNextPosState = 0;
+		}
+
+		if(MyOutputs->BMultifunctionPrevPos && (MyOutputs->tMultifunctionActiveOnRot >= tControllerTimmer || ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) && !MyOutputs->BMultifunctionPrevPosState) {
+			MyOutputs->BMultifunctionPrevPosState = 1;
+			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
+
+			if(MyOutputs->NMultifunction[NMFIdx] - 1 < 0 ) {
+				if(MyOutputs->BMultifunctionWrap[NMFIdx]) MyOutputs->NMultifunction[NMFIdx] = MyOutputs->NMultifunctionMaxPos[NMFIdx] - 1;
+			}
+			else {
+				MyOutputs->NMultifunction[NMFIdx] --;
+			}
+		}
+		else if(!MyOutputs->BMultifunctionPrevPos) {
+			MyOutputs->BMultifunctionPrevPosState = 0;
+		}
+
+		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer) {
+			MyOutputs->BUseButtonsForMultifunction = 0;
+		}
+
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	// DISPLAY
+
+		// inputs
+		MyOutputs->BDisplayPageNext = MyInputs->BSWButtonD;
+		MyOutputs->BDisplayPagePrev = MyInputs->BSWButtonC;
+
+		if(!ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) {	// we use the page buttons function only if we have the multifunction timing feature enabled
+
+			if(!MyOutputs->BUseButtonsForMultifunction) {	// we only use them as page buttons when they are not used for the multifunction
+				if(MyOutputs->BDisplayPageNext && (MyOutputs->tDisplayPageDebounce < tControllerTimmer) && !MyOutputs->BDisplayPageNextState) {
+					MyOutputs->BDisplayPageNextState = 1;
+					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_DEBOUNCE;
+
+					MyOutputs->NDispalyPage ++;
+					MyOutputs->NDispalyPage %= DISPLAY_MAX_PAGE;
+
+				}
+				else if(!MyOutputs->BDisplayPageNext) {
+					MyOutputs->BDisplayPageNextState = 0;
+				}
+
+				if(MyOutputs->BDisplayPagePrev && (MyOutputs->tDisplayPageDebounce < tControllerTimmer) && !MyOutputs->BDisplayPagePrevState) {
+					MyOutputs->BDisplayPagePrevState = 1;
+					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_DEBOUNCE;
+
+					MyOutputs->NDispalyPage --;
+					if(MyOutputs->NDispalyPage < 0) MyOutputs->NDispalyPage = DISPLAY_MAX_PAGE - 1;
+
+				}
+				else if(!MyOutputs->BDisplayPagePrev) {
+					MyOutputs->BDisplayPagePrevState = 0;
+				}
+			}
+		}
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -148,8 +296,20 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			break;
 		}
 
-}
 
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	// SHIFTER STATE MACHINE
+
+		// we copy the input errors to be displayed in the screen
+		MyOutputs->NErrorWord = (MyInputs->InputsErrorWord) << 16;
+
+		// TODO: in the 16 LSBs include
+		// false neutral
+		// other controller errors that are useful for the driver like rejected shifts
+		// antistall until it gets deactivated
+
+}
 
 void IDLE_Entry(void) {
 	NPreviousState = NCurrentState;
@@ -197,6 +357,8 @@ void PRE_UPSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_UPSHIFT_STATE;
 
+	MyOutputs->BShiftingInProgress = 1;
+
 	tPreShiftTimer = HAL_GetTick();
 }
 void PRE_UPSHIFT_Exit(void) {
@@ -240,12 +402,12 @@ void PRE_UPSHIFT_Event(void) {
 }
 void PRE_UPSHIFT_Run(void) {
 
-	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_FIRST_WITHOUT_CLUTCH) {	// trying to put 1st gear without clutch
+	if(MyInputs->NGear == 0 && MyInputs->rClutchPaddle < CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_FIRST_WITHOUT_CLUTCH) {	// trying to put 1st gear without clutch
 		RaiseControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH);
 	}
 	else { ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError) {									// trying to shift up with too low rpm
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
@@ -254,6 +416,11 @@ void PRE_UPSHIFT_Run(void) {
 		RaiseControlError(TARGET_GEAR_EXCEEDS_MAX);
 	}
 	else { ClearControlError(TARGET_GEAR_EXCEEDS_MAX); }
+
+	if(MyInputs->BFalseNeutral && !MyInputs->BNGearInError && MyInputs->rClutchPaddle < CLUTCH_PADDLE_THRESHOLD_FOR_FIRST) {	// trying to shift during False Neutral without clutch pressed
+		RaiseControlError(FALSE_NEUTRAL_WITH_NO_CLUTCH);
+	}
+	else { ClearControlError(FALSE_NEUTRAL_WITH_NO_CLUTCH); }
 }
 
 
@@ -261,6 +428,8 @@ void PRE_UPSHIFT_Run(void) {
 void PRE_DNSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_DNSHIFT_STATE;
+
+	MyOutputs->BShiftingInProgress = 1;
 
 	tPreShiftTimer = HAL_GetTick();
 }
@@ -304,12 +473,12 @@ void PRE_DNSHIFT_Event(void) {
 }
 void PRE_DNSHIFT_Run(void) {
 
-	if(MyInputs->NGear == 1 && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_NEUTRAL_WITHOUT_CLUTCH && !(MyInputs->BrClutchPaddleInError && ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR)) {	// trying to put neutral gear without clutch
+	if(MyInputs->NGear == 1 && MyInputs->rClutchPaddle < CLUTCH_PADDLE_THRESHOLD_FOR_FIRST && !ALLOW_NEUTRAL_WITHOUT_CLUTCH && !(MyInputs->BrClutchPaddleInError && ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR)) {	// trying to put neutral gear without clutch
 		RaiseControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH);
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError) {									// trying to shift down with too high rpm
+	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift down with too high rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_DNSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_DNSHIFT); }
@@ -319,6 +488,10 @@ void PRE_DNSHIFT_Run(void) {
 	}
 	else { ClearControlError(TARGET_GEAR_LESS_THAN_NEUTRAL); }
 
+	if(MyInputs->BFalseNeutral && !MyInputs->BNGearInError && MyInputs->rClutchPaddle < CLUTCH_PADDLE_THRESHOLD_FOR_FIRST) {	// trying to shift during False Neutral without clutch pressed
+		RaiseControlError(FALSE_NEUTRAL_WITH_NO_CLUTCH);
+	}
+	else { ClearControlError(FALSE_NEUTRAL_WITH_NO_CLUTCH); }
 }
 
 void SHIFTING_Entry(void) {
@@ -380,7 +553,7 @@ void SHIFTING_Event(void) {
 }
 void SHIFTING_Run(void) {
 
-	// based on the error status and the srat preferences decide in which controller to enter
+	// based on the error status and the strat preferences decide in which controller to enter
 
 
 
@@ -406,9 +579,7 @@ void POSTSHIFT_Entry(void) {
 
 }
 void POSTSHIFT_Exit(void) {
-
-	// TODO: probably here we need to set the MyOutputs->NGear = MyInputs->NGear
-
+	MyOutputs->BShiftingInProgress = 0;
 }
 void POSTSHIFT_Event(void) {
 
@@ -422,6 +593,10 @@ void POSTSHIFT_Event(void) {
 	if(!MyOutputs->NControlErrorStatus) {
 		// we update the Gear variable for the outputs
 		MyOutputs->NGear = MyInputs->NGear;
+
+		// we rest the False Neutral flag TODO: not sure if correct here
+		MyInputs->BFalseNeutral = 0;
+
 		POSTSHIFT_Exit();
 		IDLE_Entry();
 		return;
@@ -437,7 +612,7 @@ void POSTSHIFT_Event(void) {
 }
 void POSTSHIFT_Run(void) {
 
-	if(CHECK_POST_SHIFT_GEAR && MyInputs->NGear != MyOutputs->NGearTarget) {
+	if(CHECK_POST_SHIFT_GEAR && MyInputs->NGear != MyOutputs->NGearTarget && !MyInputs->BFalseNeutral) {
 		RaiseControlError(GEAR_TARGET_MISMATCH);
 	}
 	else { ClearControlError(GEAR_TARGET_MISMATCH); }
@@ -449,11 +624,14 @@ void ERROR_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = ERROR_STATE;
 
+	MyOutputs->BShiftingInProgress = 0;
 	// TODO: we need to open a led to indicate the Error State !!!
+	// or send it to the display via CAN
 
 	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
+	MyOutputs->xClutchTargetShift = 0;
 
 	// reset all control variables for the next actuation
 	//MyOutputs->xClutchTarget = xCLUTCH_FULLY_ENGAGED;

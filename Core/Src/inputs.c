@@ -16,10 +16,11 @@
 // Timing variables
 uint32_t tInputsTimmer;
 uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
-uint32_t tBDriverKillTimer;
+uint32_t tBDriverKillTimer, tBFalseNeutral;
 
 // I/O Flags
 uint8_t BUpShiftRequested, BDnShiftRequested, BLaunchRequested, BDeclutchRequested, BClutchPaddlePressed;
+uint8_t BFalseNeutralState;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
@@ -89,18 +90,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BSWButtonF = BButtonFCAN;
 
 	// ---------------------------------------------------------------------------------------------------
-
-	// TODO: we need to think the order of execution of the inputs (now they are a bit random)
-	// check if there are dependencies
-
-	// TODO: think about putting the analog read (buckup) buttons inside the CAN error state to gain some time during normal running
-	// or, do them at the same time and compare inputs
-
-	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
 		// Inverted logic!! DriverKill=1 means ShutDown is Open, DriverKill=0 means ShutDown is closed
-	if(inputs->NSHIFTERDIN04 & (tBDriverKillTimer < tInputsTimmer) && inputs->BDriverKill) {
+	if(inputs->NSHIFTERDIN04 && (tBDriverKillTimer < tInputsTimmer) && inputs->BDriverKill) {
 		inputs->BDriverKill = 0;
 		tBDriverKillTimer = tInputsTimmer + DRIVER_KILL_DEBOUNCE;
 	}
@@ -109,7 +102,7 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// NGear Conditioning
+	// NGear Input
 
 	// Analog Input
 	inputs->VNGear = inputs->VSHIFTERAnalog04;
@@ -117,18 +110,29 @@ void ReadInputs(InputStruct *inputs){
 	// mapping
 	inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGear, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
 
-	// TODO: think about checking the float NGear for +-0.2 to define false neutral
-
 	// conditioning (round float to nearest integer)
 	inputs->NGear = (uint8_t)round(inputs->NGearRaw);
 
 	// CLAMPING
 	inputs->NGear = CLAMP(inputs->NGear, 0, MAX_GEAR);
 
+	// False Neutral detection
+	if(inputs->NGearRaw >= NGearRawLimsMaxMap[inputs->NGear] || inputs->NGearRaw <= NGearRawLimsMinMap[inputs->NGear]) {
+		tBFalseNeutral = tInputsTimmer + FALSE_NEUTRAL_DEBOUNCE;
+		BFalseNeutralState = 1;
+	}
+	else {
+		BFalseNeutralState = 0;
+	}
+
+	if(tBFalseNeutral < tInputsTimmer && BFalseNeutralState) { //leave some time for the NGear to settle before deciding if it is in false neutral and to avoid flickering
+		inputs->BFalseNeutral = 1; // it gets reset inside the controller code at the post shift phase after a successful gear change
+	}
+
 	// check for errors
 	if(inputs->BNGearInError) {
 		RaiseFault(inputs, NGEAR_FAULT);
-		// inputs->NGear = 1; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
+		// inputs->NGear = default gear; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
 	}
 	else ClearFault(inputs, NGEAR_FAULT);
 
@@ -276,32 +280,41 @@ void ReadInputs(InputStruct *inputs){
 		inputs->BLaunchRequest = 0;		// we force to zero if in error
 	}
 
+
+	// ---------------------------------------------------------------------------------------------------
+	// Rotary Switch
+
+	inputs->VSwhitchA = inputs->VSHIFTERAnalog05;
+	inputs->BNSwitchAInError = My2DMapInterpolate(SWITCHA_MAP_SIZE, NSWitchAmap, inputs->VSwhitchA, &(inputs->NSwitchARaw), VNSWITCH_MARGIN, VNSWITCH_MARGIN);
+
+	inputs->NSwitchA = CLAMP((uint8_t)round(inputs->NSwitchARaw), 1, SWITCHA_MAP_SIZE);
+
 	// ---------------------------------------------------------------------------------------------------
 	// Toggle Switches
 
 	// Toggle 1
-	if(inputs->BSWButtonA && tToggleSwitch01 < tInputsTimmer) {
+	if(inputs->BSWButtonE && tToggleSwitch01 < tInputsTimmer) {
 		inputs->NToggleSwitch01State ^= 1;
 		tToggleSwitch01 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
 	}
 
 	// Toggle 2
-	if(inputs->BSWButtonB && tToggleSwitch02 < tInputsTimmer) {
+	if(inputs->BSWButtonA && tToggleSwitch02 < tInputsTimmer) {
 		inputs->NToggleSwitch02State ^= 1;
 		tToggleSwitch02 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
 	}
 
 	// Toggle 3
-	if(inputs->BSWButtonC && tToggleSwitch03 < tInputsTimmer) {
+	if(inputs->BSWButtonB && tToggleSwitch03 < tInputsTimmer) {
 		inputs->NToggleSwitch03State ^= 1;
 		tToggleSwitch03 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
 	}
 
 	// Toggle 4
-	if(inputs->BSWButtonE && tToggleSwitch04 < tInputsTimmer) {
-		inputs->NToggleSwitch04State ^= 1;
-		tToggleSwitch04 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
+//	if(inputs->BSWButtonE && tToggleSwitch04 < tInputsTimmer) {
+//		inputs->NToggleSwitch04State ^= 1;
+//		tToggleSwitch04 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
+//	}
 
 
 	// ---------------------------------------------------------------------------------------------------
@@ -390,7 +403,11 @@ void ReadInputs(InputStruct *inputs){
 		}
 	}
 
+	// ---------------------------------------------------------------------------------------------------
+	// ERRORS
 
+	// TODO: fill the InputsErroWord with all the InError variables
+	// SWfitted should get inverted, see all others
 
 	// ---------------------------------------------------------------------------------------------------
 
