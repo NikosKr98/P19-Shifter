@@ -444,7 +444,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 //Don't forget to add and enable filters for each message
 	switch(RxHeader.StdId) {
 
-	 case SIU_RX_ID :
+	 case SIU_TX_ID01 :
 		 tCANSteeringWheelLastSeen = HAL_GetTick();
 
 		 BUpShiftButtonCANInError 		= (RxBuffer[0] >> 0) & 0x01;
@@ -465,7 +465,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
 		 break;
 
-	 case ECU_RX_ID:
+	 case ECU_TX_ID01:
 		 tCANECULastSeen = HAL_GetTick();
 		 nEngineRawCAN = (uint16_t)(RxBuffer[0] << 8 | RxBuffer[1]);
 		 break;
