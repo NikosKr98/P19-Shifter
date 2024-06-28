@@ -402,25 +402,39 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// ERRORS
+	// INPUTS  STATUS
 
-	inputs->NInputsErrorWord = 0;
-	inputs->NInputsErrorWord |= inputs->BNGearInError 					<< 0;
-	inputs->NInputsErrorWord |= inputs->BUpShiftButtonCANInError 		<< 1;
-	inputs->NInputsErrorWord |= inputs->BDnShiftButtonCANInError 		<< 2;
-	inputs->NInputsErrorWord |= inputs->BUpDnShiftButtonAnalogInError 	<< 3;
-	inputs->NInputsErrorWord |= inputs->BUpShiftRequestInError 			<< 4;
-	inputs->NInputsErrorWord |= inputs->BDnShiftRequestInError 			<< 5;
-	inputs->NInputsErrorWord |= inputs->BrClutchPaddleRawCANInError 	<< 6;
-	inputs->NInputsErrorWord |= inputs->BrClutchPaddleRawAnalogInError 	<< 7;
-	inputs->NInputsErrorWord |= inputs->BrClutchPaddleInError 			<< 8;
-	inputs->NInputsErrorWord |= inputs->BLaunchRequestInError 			<< 9;
-	inputs->NInputsErrorWord |= inputs->BDeclutchRequestInError 		<< 10;
-	inputs->NInputsErrorWord |= inputs->BNSwitchAInError 				<< 11;
-	inputs->NInputsErrorWord |= inputs->BnEngineInError 				<< 12;
-	inputs->NInputsErrorWord |= !inputs->BSteeringWheelFitted 			<< 13;	// inverted in order to simulate the error state
-	inputs->NInputsErrorWord |= 0						 				<< 14;
-	inputs->NInputsErrorWord |= 0						 				<< 15;
+	inputs->NInputsStatusWord = 0;
+	inputs->NInputsStatusWord |= inputs->BNGearInError 					<< 0;
+	inputs->NInputsStatusWord |= inputs->BUpShiftButtonCANInError 		<< 1;
+	inputs->NInputsStatusWord |= inputs->BDnShiftButtonCANInError 		<< 2;
+	inputs->NInputsStatusWord |= inputs->BUpDnShiftButtonAnalogInError 	<< 3;
+	inputs->NInputsStatusWord |= inputs->BUpShiftRequestInError 		<< 4;
+	inputs->NInputsStatusWord |= inputs->BDnShiftRequestInError 		<< 5;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleRawCANInError 	<< 6;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleRawAnalogInError << 7;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleInError 			<< 8;
+	inputs->NInputsStatusWord |= inputs->BLaunchRequestInError 			<< 9;
+	inputs->NInputsStatusWord |= inputs->BDeclutchRequestInError 		<< 10;
+	inputs->NInputsStatusWord |= inputs->BNSwitchAInError 				<< 11;
+	inputs->NInputsStatusWord |= inputs->BnEngineInError 				<< 12;
+	inputs->NInputsStatusWord |= !inputs->BSteeringWheelFitted 			<< 13;	// inverted in order to simulate the error state
+	inputs->NInputsStatusWord |= 0							 			<< 14;
+	inputs->NInputsStatusWord |= 0						 				<< 15;
+
+	inputs->NInputsStatusWord |= inputs->BDriverKill	 				<< 16;
+	inputs->NInputsStatusWord |= inputs->BUpShiftRequest 				<< 17;
+	inputs->NInputsStatusWord |= inputs->BDnShiftRequest 				<< 18;
+	inputs->NInputsStatusWord |= inputs->BFalseNeutral	 				<< 19;
+	inputs->NInputsStatusWord |= inputs->NToggleSwitch01State			<< 20;
+	inputs->NInputsStatusWord |= inputs->NToggleSwitch02State			<< 21;
+	inputs->NInputsStatusWord |= inputs->NToggleSwitch03State			<< 22;
+	inputs->NInputsStatusWord |= inputs->NToggleSwitch04State			<< 23;
+	inputs->NInputsStatusWord |= inputs->BLaunchRequest	 				<< 24;
+	inputs->NInputsStatusWord |= inputs->BDeclutchRequest 				<< 25;
+	inputs->NInputsStatusWord |= (inputs->NrClutchPaddleSource & 0x02)	<< 26;	// 2 bits (26,27)
+	inputs->NInputsStatusWord |= (inputs->NBUpshiftRequestSource & 0x02)<< 28;	// 2 bits (28,29)
+	inputs->NInputsStatusWord |= (inputs->NBDnshiftRequestSource & 0x02)<< 30;	// 2 bits (30,31)
 
 	// ---------------------------------------------------------------------------------------------------
 

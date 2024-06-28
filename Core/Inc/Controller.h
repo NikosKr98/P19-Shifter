@@ -47,6 +47,7 @@
 #define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
 #define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
 #define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
+#define xCLUTCH_TARGET_ACTUATED				1000	// the value at which the clutch is considered as actuated (past the first few mm that it is still engaged)
 
 // MULTIFUNCTION
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
@@ -153,7 +154,6 @@ typedef struct {
 	ControlError NControlErrorStatusLogged;	// it keeps the last error seen
 
 	// GEAR
-	uint8_t NGear;							// the current gear (copy from input struct)
 	uint8_t NGearTarget;					// target gear for the controller
 
 	// CLUTCH
@@ -174,7 +174,7 @@ typedef struct {
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
 	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift
 
-	// Steering Wheel LED Demands
+	// Steering Wheel LED
 	uint8_t BSWLEDA;
 	uint8_t BSWLEDB;
 	uint8_t BSWLEDC;
@@ -206,6 +206,7 @@ typedef struct {
 	// ECU
 	uint8_t BSparkCut;						// flag to send to the ECU for spark cutting
 	uint8_t BLaunchControl;					// flag to send to the ECU for launch control
+	uint8_t NLaunchControlState;			// the state of the Launch controller
 
 	// STRATEGIES
 	uint8_t BOverrideActuateClutchOnNextUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
@@ -216,7 +217,8 @@ typedef struct {
 	uint8_t BPIDRunning;					// 1 when the PID controller is running
 	uint8_t BPIDTimeout;					// 1 if the PID controller did not manage to reach the target before the timeout
 
-	uint32_t NErrorWord;					// contains the input bit errors ( 2 MSB ) and the controller errors ( 2 LSB )
+	uint32_t NControllerStatusWord;			// bit word for flags and various status bits (
+
 
 }OutputStruct;
 

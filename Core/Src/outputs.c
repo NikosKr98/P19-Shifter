@@ -24,14 +24,13 @@ uint16_t xClutchTargetOut;
 #define TIMER_MAX_PRESCALER 1000
 uint32_t nTimerPrescaler;
 
+// timing variables
+uint32_t tOutputsTimer;
+
 uint8_t TxData[8];
 
 // private function declarations
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data);
-void shiftup_activation(OutputStruct *output);
-void shiftdown_activation(OutputStruct *output);
-void neutral_activation(OutputStruct *output);
-void end_of_shift(OutputStruct *output);
 
 
 void InitOutputs(void) {
@@ -43,12 +42,14 @@ void InitOutputs(void) {
 	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 }
 
-void WriteOutputs(OutputStruct *output) {
+void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
+
+	tOutputsTimer = HAL_GetTick();
 
 	// CLUTCH
 
 	// Clamping to avoid out of bounds values
-	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
+	xClutchTargetOut = CLAMP(outputs->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
 
 	// The output for the clutch servo is a +5V (or 3.3V) pulse 50% duty cycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 
@@ -68,8 +69,8 @@ void WriteOutputs(OutputStruct *output) {
 	// Shifting
 
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
-	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BUpShiftPortState);
-	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, outputs->BUpShiftPortState);
+	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, outputs->BDnShiftPortState);
 
 
 	// Toggle Switches
@@ -84,6 +85,65 @@ void WriteOutputs(OutputStruct *output) {
 	// use the output->BUseButtonsForMultifunction to pop up the message for the multifunction in the screen
 	// send the display index (remember it is already 0-based)
 	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF, in order to have also the flashing action?
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 1: Shifter Feedback
+
+	TxData[0] = inputs->NGear;
+	TxData[1] = inputs->rClutchPaddle;
+	TxData[2] = (uint8_t)(outputs->xClutchTarget >> 8);
+	TxData[3] = (uint8_t)outputs->xClutchTarget;
+	TxData[4] = (uint8_t)(inputs->nEngine >> 8);
+	TxData[5] = (uint8_t)inputs->nEngine;
+
+	uint16_t VSupplyCAN = (uint16_t)(inputs->VSupply * 1000);
+
+	TxData[6] = (uint8_t)(VSupplyCAN >> 8);
+	TxData[7] = (uint8_t)VSupplyCAN;
+
+	CAN_TX(SHIFTER_TX_ID01, 8, TxData);
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 2: Shifter Control
+
+	TxData[0] = 0;	// Reserved for ECU control
+	TxData[1] = 0;
+	TxData[2] = 0;
+	TxData[3] = 0;
+	TxData[4] = (uint8_t)outputs->NDispalyPage;
+
+	TxData[5] = 0;						// Display and LEDs control
+	TxData[5] |= 0		>> 0;
+	TxData[5] |= 0		>> 1;
+	TxData[5] |= 0		>> 2;
+	TxData[5] |= 0		>> 3;
+	TxData[5] |= outputs->BSWLEDA		>> 4;
+	TxData[5] |= outputs->BSWLEDB		>> 5;
+	TxData[5] |= outputs->BSWLEDC		>> 6;
+	TxData[5] |= outputs->BSWLEDD		>> 7;
+
+	TxData[6] = inputs->NCANErrors;
+	TxData[7] = inputs->NCANRxErrors;
+
+	CAN_TX(SHIFTER_TX_ID02, 8, TxData);
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 3: Shifter Status
+
+	TxData[0] = (uint8_t)(inputs->NInputsStatusWord >> 0);
+	TxData[1] = (uint8_t)(inputs->NInputsStatusWord >> 8);
+	TxData[2] = (uint8_t)(inputs->NInputsStatusWord >> 16);
+	TxData[3] = (uint8_t)(inputs->NInputsStatusWord >> 24);
+
+	TxData[4] = (uint8_t)(outputs->NControllerStatusWord >> 0);
+	TxData[5] = (uint8_t)(outputs->NControllerStatusWord >> 8);
+	TxData[6] = (uint8_t)(outputs->NControllerStatusWord >> 16);
+	TxData[7] = (uint8_t)(outputs->NControllerStatusWord >> 24);
+
+	CAN_TX(SHIFTER_TX_ID03, 8, TxData);
+
+	// ---------------------------------------------------------------------------------------------------
+
 }
 
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {

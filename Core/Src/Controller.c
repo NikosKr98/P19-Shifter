@@ -168,6 +168,12 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// from the driver and the shifter requests when enabled from the respective strategy
 		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
+		if(MyOutputs->xClutchTarget >= xCLUTCH_TARGET_ACTUATED) {
+			MyOutputs->BClutchActuated = 1;
+		}
+		else {
+			MyOutputs->BClutchActuated = 0;
+		}
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -307,24 +313,34 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	// ERRORs
+	// CONTROLLER STATUS
 
-		// we reset the word
-		MyOutputs->NErrorWord = 0;
+		MyOutputs->NControllerStatusWord = 0;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BUpShiftPortState				<<0;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BDnShiftPortState				<<1;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BClutchActuated					<<2;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BSparkCut						<<3;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BLaunchControl					<<4;
+		MyOutputs->NControllerStatusWord |= (MyOutputs->NAntistallState == 2 ? 1 : 0)	<<5;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BShiftingInProgress				<<6;
+		MyOutputs->NControllerStatusWord |= 0											<<7;
+		MyOutputs->NControllerStatusWord |= 0											<<8;
+		MyOutputs->NControllerStatusWord |= 0											<<9;
+		MyOutputs->NControllerStatusWord |= 0											<<10;
+		MyOutputs->NControllerStatusWord |= 0											<<11;
+		MyOutputs->NControllerStatusWord |= 0											<<12;
+		MyOutputs->NControllerStatusWord |= 0											<<13;
+		MyOutputs->NControllerStatusWord |= 0											<<14;
+		MyOutputs->NControllerStatusWord |= 0											<<15;
 
-		// we copy the input errors to be displayed in the screen
-		MyOutputs->NErrorWord |= (uint32_t)(MyInputs->NInputsErrorWord) << 16;
-
-		MyOutputs->NErrorWord |= MyInputs->BFalseNeutral 					<<0;
-		MyOutputs->NErrorWord |= (MyOutputs->NAntistallState == 2 ? 1 : 0)	<<1;
-
-
-		MyOutputs->NErrorWord |= (MyOutputs->NControlErrorStatusShadow >> 1) && 0x3fff <<2;	// the controller errors (without the first which is "No error"), taken only the 14 first bits out of the 32
+		MyOutputs->NControllerStatusWord |= (MyOutputs->NControlErrorStatusShadow  && 0xffff) <<16;	// the controller errors (without the first which is "No error"), taken only the 16 first bits out of the 32
 
 		if(tControllerErrorStatusShadow < tControllerTimmer) {
 			tControllerErrorStatusShadow = tControllerTimmer + CONTROLLER_STATUS_SHADOW_REFRESH;
 			MyOutputs->NControlErrorStatusShadow = 0;
 		}
+
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 }
 
@@ -572,16 +588,14 @@ void POSTSHIFT_Entry(void) {
 }
 void POSTSHIFT_Exit(void) {
 	MyOutputs->BShiftingInProgress = 0;
+
+	// we rest the False Neutral flag TODO: not sure if correct here
+	MyInputs->BFalseNeutral = 0;
 }
 void POSTSHIFT_Event(void) {
 
 
 	if(!MyOutputs->NControlErrorStatus) {
-		// we update the Gear variable for the outputs
-		MyOutputs->NGear = MyInputs->NGear;
-
-		// we rest the False Neutral flag TODO: not sure if correct here
-		MyInputs->BFalseNeutral = 0;
 
 		POSTSHIFT_Exit();
 		IDLE_Entry();

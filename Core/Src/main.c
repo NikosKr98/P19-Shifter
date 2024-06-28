@@ -141,7 +141,7 @@ int main(void)
 
 		  ReadInputs(&Inputs);
 		  Controller(&Inputs,&Outputs);
-		  WriteOutputs(&Outputs);
+		  WriteOutputs(&Inputs,&Outputs);
 	  }
 
     /* USER CODE END WHILE */

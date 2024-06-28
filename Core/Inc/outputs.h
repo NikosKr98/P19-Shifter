@@ -17,6 +17,8 @@ extern CAN_HandleTypeDef hcan;
 
 
 #define SHIFTER_TX_ID01 	0x320
+#define SHIFTER_TX_ID02 	0x321
+#define SHIFTER_TX_ID03 	0x322
 
 #define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
 
@@ -27,7 +29,7 @@ extern CAN_HandleTypeDef hcan;
 	// DO04: ECU (SPRACK CUT)
 
 void InitOutputs(void);
-void WriteOutputs(OutputStruct *output);
+void WriteOutputs(InputStruct *inputs, OutputStruct *outputs);
 
 
 #endif /* INC_OUTPUTS_H_ */

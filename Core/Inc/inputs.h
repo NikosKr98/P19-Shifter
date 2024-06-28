@@ -196,7 +196,7 @@ typedef struct _InputStruct {
 
 	float VSupply;							// PCB Voltage Input Diagnostic
 
-	uint16_t NInputsErrorWord;				// bit word for all input InError variables
+	uint32_t NInputsStatusWord;				// bit word for flags and various status bits
 
 } InputStruct;
 
