@@ -19,6 +19,7 @@ extern CAN_HandleTypeDef hcan;
 #define SHIFTER_TX_ID01 	0x320
 #define SHIFTER_TX_ID02 	0x321
 #define SHIFTER_TX_ID03 	0x322
+#define SHIFTER_TX_ID04 	0x323
 
 #define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
 

@@ -81,7 +81,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 
 
 	// CAN
-	// add the info of the shutDown (DriverKill) in the CAN for others to see
+
 	// use the output->BUseButtonsForMultifunction to pop up the message for the multifunction in the screen
 	// send the display index (remember it is already 0-based)
 	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF, in order to have also the flashing action?
@@ -104,28 +104,42 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	CAN_TX(SHIFTER_TX_ID01, 8, TxData);
 
 	// ---------------------------------------------------------------------------------------------------
-	// Frame 2: Shifter Control
+	// Frame 2: Shifter Control 1
 
-	TxData[0] = 0;	// Reserved for ECU control
-	TxData[1] = 0;
-	TxData[2] = 0;
+	TxData[0] = (uint8_t)outputs->NDispalyPage;
+	TxData[1] = outputs->NMultifunctionActiveSwitch;
+	TxData[2] = (uint8_t)(outputs->NMultifunction[outputs->NMultifunctionActiveSwitch-1] + 1);
 	TxData[3] = 0;
-	TxData[4] = (uint8_t)outputs->NDispalyPage;
+	TxData[4] = outputs->NDisplayFlags;
 
-	TxData[5] = 0;						// Display and LEDs control
-	TxData[5] |= 0		>> 0;
+	TxData[5] = 0;
+	TxData[5] |= outputs->BUseButtonsForMultifunction	>> 0;
 	TxData[5] |= 0		>> 1;
 	TxData[5] |= 0		>> 2;
 	TxData[5] |= 0		>> 3;
-	TxData[5] |= outputs->BSWLEDA		>> 4;
-	TxData[5] |= outputs->BSWLEDB		>> 5;
-	TxData[5] |= outputs->BSWLEDC		>> 6;
-	TxData[5] |= outputs->BSWLEDD		>> 7;
+	TxData[5] |= outputs->BSWLEDA						>> 4;
+	TxData[5] |= outputs->BSWLEDB						>> 5;
+	TxData[5] |= outputs->BSWLEDC						>> 6;
+	TxData[5] |= outputs->BSWLEDD						>> 7;
 
 	TxData[6] = inputs->NCANErrors;
 	TxData[7] = inputs->NCANRxErrors;
 
 	CAN_TX(SHIFTER_TX_ID02, 8, TxData);
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 2: Shifter Control 2
+
+	TxData[0] = 0;	// Reserved for ECU control
+	TxData[1] = 0;
+	TxData[2] = 0;
+	TxData[3] = 0;
+	TxData[4] = 0;
+	TxData[5] = 0;
+	TxData[6] = 0;
+	TxData[7] = 0;
+
+	CAN_TX(SHIFTER_TX_ID03, 8, TxData);
 
 	// ---------------------------------------------------------------------------------------------------
 	// Frame 3: Shifter Status
@@ -140,7 +154,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	TxData[6] = (uint8_t)(outputs->NControllerStatusWord >> 16);
 	TxData[7] = (uint8_t)(outputs->NControllerStatusWord >> 24);
 
-	CAN_TX(SHIFTER_TX_ID03, 8, TxData);
+	CAN_TX(SHIFTER_TX_ID04, 8, TxData);
 
 	// ---------------------------------------------------------------------------------------------------
 

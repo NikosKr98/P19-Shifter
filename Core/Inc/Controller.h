@@ -53,6 +53,22 @@
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
 #define MULTIFUNCTION_ACTIVE_TIME			2000	// the time the display shows the map position and value and the buttons work as +/-
 
+// Max position										//		ATTENTION	!! (do not exceed the array size, currently 14)
+#define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map (select value = 0 to deactivate the map)
+#define MULTIFUNCTION02_MAX_POS				14
+#define MULTIFUNCTION03_MAX_POS				14
+#define MULTIFUNCTION04_MAX_POS				14
+#define MULTIFUNCTION05_MAX_POS				14
+#define MULTIFUNCTION06_MAX_POS				0
+#define MULTIFUNCTION07_MAX_POS				0
+#define MULTIFUNCTION08_MAX_POS				2
+#define MULTIFUNCTION09_MAX_POS				14
+#define MULTIFUNCTION10_MAX_POS				14
+#define MULTIFUNCTION11_MAX_POS				14
+#define MULTIFUNCTION12_MAX_POS				14
+#define MULTIFUNCTION13_MAX_POS				14
+#define MULTIFUNCTION14_MAX_POS				0
+
 // Default position
 #define MULTIFUNCTION01_DEF_POS				1		// the default positions of the maps on power up
 #define MULTIFUNCTION02_DEF_POS				1
@@ -85,24 +101,9 @@
 #define MULTIFUNCTION13_WRAP				1
 #define MULTIFUNCTION14_WRAP				1
 
-// Max position
-#define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map (select value = 0 to deactivate the map)
-#define MULTIFUNCTION02_MAX_POS				14
-#define MULTIFUNCTION03_MAX_POS				14
-#define MULTIFUNCTION04_MAX_POS				14
-#define MULTIFUNCTION05_MAX_POS				14
-#define MULTIFUNCTION06_MAX_POS				0
-#define MULTIFUNCTION07_MAX_POS				0
-#define MULTIFUNCTION08_MAX_POS				2
-#define MULTIFUNCTION09_MAX_POS				14
-#define MULTIFUNCTION10_MAX_POS				14
-#define MULTIFUNCTION11_MAX_POS				14
-#define MULTIFUNCTION12_MAX_POS				14
-#define MULTIFUNCTION13_MAX_POS				14
-#define MULTIFUNCTION14_MAX_POS				0
-
-// functions association
+// Multifunction associations
 #define MULTIFUNCTION_CLUTCH_RELEASE_IDX	3	// map 3 (starting from 1) is the one associated to the clutch release maps
+
 
 // DISPLAY
 #define DISPLAY_MAX_PAGE					5		// the maximum page number we have in the screen, not the index
@@ -182,6 +183,7 @@ typedef struct {
 
 	// Display Buttons & control
 	int8_t NDispalyPage;					// the currently selected display page
+	uint8_t NDisplayFlags;					// flags for display messages and diagnostics
 	uint8_t BDisplayPageNext;				// the button state from the input structure
 	uint8_t BDisplayPagePrev;				// the button state from the input structure
 	uint8_t BDisplayPageNextState;			// the state of the Next page button for control reasons

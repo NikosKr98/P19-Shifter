@@ -38,21 +38,37 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 
 	// Multifunction
 
+	// map map size
+	outputs->NMultifunctionMaxPos[0] = MULTIFUNCTION01_MAX_POS;
+	outputs->NMultifunctionMaxPos[1] = MULTIFUNCTION02_MAX_POS;
+	outputs->NMultifunctionMaxPos[2] = MULTIFUNCTION03_MAX_POS;
+	outputs->NMultifunctionMaxPos[3] = MULTIFUNCTION04_MAX_POS;
+	outputs->NMultifunctionMaxPos[4] = MULTIFUNCTION05_MAX_POS;
+	outputs->NMultifunctionMaxPos[5] = MULTIFUNCTION06_MAX_POS;
+	outputs->NMultifunctionMaxPos[6] = MULTIFUNCTION07_MAX_POS;
+	outputs->NMultifunctionMaxPos[7] = MULTIFUNCTION08_MAX_POS;
+	outputs->NMultifunctionMaxPos[8] = MULTIFUNCTION09_MAX_POS;
+	outputs->NMultifunctionMaxPos[9] = MULTIFUNCTION10_MAX_POS;
+	outputs->NMultifunctionMaxPos[10] = MULTIFUNCTION11_MAX_POS;
+	outputs->NMultifunctionMaxPos[11] = MULTIFUNCTION12_MAX_POS;
+	outputs->NMultifunctionMaxPos[12] = MULTIFUNCTION13_MAX_POS;
+	outputs->NMultifunctionMaxPos[13] = MULTIFUNCTION13_MAX_POS;
+
 	// default values
-	outputs->NMultifunctionDefMask[0] = MULTIFUNCTION01_DEF_POS;
-	outputs->NMultifunctionDefMask[1] = MULTIFUNCTION02_DEF_POS;
-	outputs->NMultifunctionDefMask[2] = MULTIFUNCTION03_DEF_POS;
-	outputs->NMultifunctionDefMask[3] = MULTIFUNCTION04_DEF_POS;
-	outputs->NMultifunctionDefMask[4] = MULTIFUNCTION05_DEF_POS;
-	outputs->NMultifunctionDefMask[5] = MULTIFUNCTION06_DEF_POS;
-	outputs->NMultifunctionDefMask[6] = MULTIFUNCTION07_DEF_POS;
-	outputs->NMultifunctionDefMask[7] = MULTIFUNCTION08_DEF_POS;
-	outputs->NMultifunctionDefMask[8] = MULTIFUNCTION09_DEF_POS;
-	outputs->NMultifunctionDefMask[9] = MULTIFUNCTION10_DEF_POS;
-	outputs->NMultifunctionDefMask[10] = MULTIFUNCTION11_DEF_POS;
-	outputs->NMultifunctionDefMask[11] = MULTIFUNCTION12_DEF_POS;
-	outputs->NMultifunctionDefMask[12] = MULTIFUNCTION13_DEF_POS;
-	outputs->NMultifunctionDefMask[13] = MULTIFUNCTION13_DEF_POS;
+	outputs->NMultifunctionDefMask[0] = (MULTIFUNCTION01_DEF_POS <= MULTIFUNCTION01_MAX_POS ? MULTIFUNCTION01_DEF_POS : MULTIFUNCTION01_MAX_POS);
+	outputs->NMultifunctionDefMask[1] = (MULTIFUNCTION02_DEF_POS <= MULTIFUNCTION02_MAX_POS ? MULTIFUNCTION02_DEF_POS : MULTIFUNCTION02_MAX_POS);;
+	outputs->NMultifunctionDefMask[2] = (MULTIFUNCTION03_DEF_POS <= MULTIFUNCTION03_MAX_POS ? MULTIFUNCTION03_DEF_POS : MULTIFUNCTION03_MAX_POS);;
+	outputs->NMultifunctionDefMask[3] = (MULTIFUNCTION04_DEF_POS <= MULTIFUNCTION04_MAX_POS ? MULTIFUNCTION04_DEF_POS : MULTIFUNCTION04_MAX_POS);;
+	outputs->NMultifunctionDefMask[4] = (MULTIFUNCTION05_DEF_POS <= MULTIFUNCTION05_MAX_POS ? MULTIFUNCTION05_DEF_POS : MULTIFUNCTION05_MAX_POS);;
+	outputs->NMultifunctionDefMask[5] = (MULTIFUNCTION06_DEF_POS <= MULTIFUNCTION06_MAX_POS ? MULTIFUNCTION06_DEF_POS : MULTIFUNCTION06_MAX_POS);;
+	outputs->NMultifunctionDefMask[6] = (MULTIFUNCTION07_DEF_POS <= MULTIFUNCTION07_MAX_POS ? MULTIFUNCTION07_DEF_POS : MULTIFUNCTION07_MAX_POS);;
+	outputs->NMultifunctionDefMask[7] = (MULTIFUNCTION08_DEF_POS <= MULTIFUNCTION08_MAX_POS ? MULTIFUNCTION08_DEF_POS : MULTIFUNCTION08_MAX_POS);;
+	outputs->NMultifunctionDefMask[8] = (MULTIFUNCTION09_DEF_POS <= MULTIFUNCTION09_MAX_POS ? MULTIFUNCTION09_DEF_POS : MULTIFUNCTION09_MAX_POS);;
+	outputs->NMultifunctionDefMask[9] = (MULTIFUNCTION10_DEF_POS <= MULTIFUNCTION10_MAX_POS ? MULTIFUNCTION10_DEF_POS : MULTIFUNCTION10_MAX_POS);;
+	outputs->NMultifunctionDefMask[10] = (MULTIFUNCTION11_DEF_POS <= MULTIFUNCTION11_MAX_POS ? MULTIFUNCTION11_DEF_POS : MULTIFUNCTION11_MAX_POS);;
+	outputs->NMultifunctionDefMask[11] = (MULTIFUNCTION12_DEF_POS <= MULTIFUNCTION12_MAX_POS ? MULTIFUNCTION12_DEF_POS : MULTIFUNCTION12_MAX_POS);;
+	outputs->NMultifunctionDefMask[12] = (MULTIFUNCTION13_DEF_POS <= MULTIFUNCTION13_MAX_POS ? MULTIFUNCTION13_DEF_POS : MULTIFUNCTION13_MAX_POS);;
+	outputs->NMultifunctionDefMask[13] = (MULTIFUNCTION14_DEF_POS <= MULTIFUNCTION14_MAX_POS ? MULTIFUNCTION14_DEF_POS : MULTIFUNCTION14_MAX_POS);;
 
 	// wrapping
 	outputs->BMultifunctionWrap[0] = MULTIFUNCTION01_WRAP;
@@ -70,27 +86,12 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	outputs->BMultifunctionWrap[12] = MULTIFUNCTION13_WRAP;
 	outputs->BMultifunctionWrap[13] = MULTIFUNCTION13_WRAP;
 
-	// map map size
-	outputs->NMultifunctionMaxPos[0] = MULTIFUNCTION01_MAX_POS;
-	outputs->NMultifunctionMaxPos[1] = MULTIFUNCTION02_MAX_POS;
-	outputs->NMultifunctionMaxPos[2] = MULTIFUNCTION03_MAX_POS;
-	outputs->NMultifunctionMaxPos[3] = MULTIFUNCTION04_MAX_POS;
-	outputs->NMultifunctionMaxPos[4] = MULTIFUNCTION05_MAX_POS;
-	outputs->NMultifunctionMaxPos[5] = MULTIFUNCTION06_MAX_POS;
-	outputs->NMultifunctionMaxPos[6] = MULTIFUNCTION07_MAX_POS;
-	outputs->NMultifunctionMaxPos[7] = MULTIFUNCTION08_MAX_POS;
-	outputs->NMultifunctionMaxPos[8] = MULTIFUNCTION09_MAX_POS;
-	outputs->NMultifunctionMaxPos[9] = MULTIFUNCTION10_MAX_POS;
-	outputs->NMultifunctionMaxPos[10] = MULTIFUNCTION11_MAX_POS;
-	outputs->NMultifunctionMaxPos[11] = MULTIFUNCTION12_MAX_POS;
-	outputs->NMultifunctionMaxPos[12] = MULTIFUNCTION13_MAX_POS;
-	outputs->NMultifunctionMaxPos[13] = MULTIFUNCTION13_MAX_POS;
 
 	NMultifunctionActiveSwitchPrev = MyInputs->NSwitchA;
 
-	// set the current values to default
+	// set the current positions to default
 	for(uint8_t i=0; i<NMF; i++) {
-		outputs->NMultifunction[i] = outputs->NMultifunctionMaxPos[i];
+		outputs->NMultifunction[i] = outputs->NMultifunctionDefMask[i];
 	}
 
 
@@ -168,12 +169,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// from the driver and the shifter requests when enabled from the respective strategy
 		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
-		if(MyOutputs->xClutchTarget >= xCLUTCH_TARGET_ACTUATED) {
-			MyOutputs->BClutchActuated = 1;
-		}
-		else {
-			MyOutputs->BClutchActuated = 0;
-		}
+		MyOutputs->BClutchActuated = (MyOutputs->xClutchTarget >= xCLUTCH_TARGET_ACTUATED ? 1 : 0);
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -198,6 +194,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
 			MyOutputs->BUseButtonsForMultifunction = 1;
 			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
+			// TODO: not sure if better to change the page number here and then return it to the previous one
 		}
 
 		// + Button (next position)
@@ -233,13 +230,13 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer) {
 			MyOutputs->BUseButtonsForMultifunction = 0;
+			// TODO: and here to return to the actual page
 		}
 
 
 		// Here we assign the various multifunction maps to the various indexes
 		MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_IDX-1];
 		// TODO: fill the rest...
-
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -339,6 +336,20 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			tControllerErrorStatusShadow = tControllerTimmer + CONTROLLER_STATUS_SHADOW_REFRESH;
 			MyOutputs->NControlErrorStatusShadow = 0;
 		}
+
+	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	// DISPLAY DIAGNOSTICS
+
+		MyOutputs->NDisplayFlags = 0;
+		MyOutputs->NDisplayFlags |=	(MyOutputs->NControlErrorStatusShadow >> RPM_ILLEGAL_FOR_UPSHIFT) <<0;
+		MyOutputs->NDisplayFlags |=	(MyOutputs->NControlErrorStatusShadow >> RPM_ILLEGAL_FOR_DNSHIFT) <<1;
+		MyOutputs->NDisplayFlags |=	(MyOutputs->NControlErrorStatusShadow >> GEAR_TARGET_MISMATCH) <<2;
+		MyOutputs->NDisplayFlags |=	(MyOutputs->NControlErrorStatusShadow >> FALSE_NEUTRAL_WITH_NO_CLUTCH) <<3;
+		MyOutputs->NDisplayFlags |= 0 <<4;
+		MyOutputs->NDisplayFlags |= 0 <<5;
+		MyOutputs->NDisplayFlags |= 0 <<6;
+		MyOutputs->NDisplayFlags |= 0 <<7;
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
