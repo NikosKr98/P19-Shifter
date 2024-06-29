@@ -21,6 +21,8 @@
 #define CLUTCH_PADDLE_MAP_MAX		104
 #define CLUTCH_PADDLE_MAP_MIN		-4
 
+#define CLUTCH_PADDLE_MAPS 14
+#define CLUTCH_PADDLE_MAP_OFFSETS 13
 #define CLUTCH_RELEASE_MAPS 14
 #define CLUTCH_RELEASE_MAP_POINTS	20
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -45,13 +47,32 @@ static const float NGearRawLimsMaxMap[TOTAL_GEARS] =
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // rClutchPaddle
 
-static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = {
+static const float rClutchPaddle_xClutchTargetMaps[CLUTCH_PADDLE_MAPS][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the various clutch maps
 
-	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100},
-	/* Out: xClutchTarget */		{900, 1100, 1300, 1500, 1700, 1750, 1800, 1850, 1900, 1950, 2100}
+		/* 1:	Linear			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 2:	Progressive 1	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 3:	Progressive 2	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 4:	Progressive 3	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 5:	DeadBand 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 6:	Hill 1			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 7:	Hill 2			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 8:	S1				*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 9:	S2				*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 10:	Y1				*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 11:	Y2				*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 12:	Start 1			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 13:	Start 2			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 14:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
-static const float rClutchMap[2][CLUTCH_PADDLE_MAP_SIZE] = {
+static const float rClutchPaddle_xClutchTargetOffsetMaps[CLUTCH_PADDLE_MAP_OFFSETS] = // the various clutch maps
+
+								{ 0.7,  0.75,  0.8,  0.85,  0.9,  0.95,   1,  1.05,  1.1,  1.15,  1.2,  1.25,  1.3 };
+		//		Offset %		{-30%,  -25%, -20%,	 -15%, -10%,   -5%,  0%,    5%,  10%,   15%,  20%,   25%,  30% }
+		//		Position		{  1,     2,    3,     4,    5,     6,    7,     8,   9,    10,    11,   12,    13 }
+
+
+static const float rClutchPaddleMap[2][CLUTCH_PADDLE_MAP_SIZE] = {
 
 		/* In:  VrClutchPaddleRaw */	{		1.400			, 	 		2.470       },
 		/* Out: rClutchPaddle 	  */	{ CLUTCH_PADDLE_MAP_MAX ,  CLUTCH_PADDLE_MAP_MIN}
@@ -72,18 +93,18 @@ static const float NSWitchAmap[2][SWITCHA_MAP_SIZE] = {
 // nEngine
 
 static const uint16_t nEngineAntistallMap[TOTAL_GEARS] = { 		0,		// min rpm threshold (not needed for neutral gear)
-																2000,	// 1st
-																2000,	// 2nd
-																2000,	// 3rd
-																2000,	// 4th
-																2000	// 5th
+																800,	// 1st
+																800,	// 2nd
+																800,	// 3rd
+																800,	// 4th
+																800		// 5th
 };
 
-static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 		0,	// neutral to 1st gear min rpm threshold
-																0,	// 1st to 2nd
-																0,	// 2nd to 3rd
-																0,	// 3rd to 4th
-																0,	// 4th to 5th
+static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 		0,		// neutral to 1st gear min rpm threshold
+																0,		// 1st to 2nd
+																0,		// 2nd to 3rd
+																0,		// 3rd to 4th
+																0,		// 4th to 5th
 																0
 };
 
@@ -119,30 +140,30 @@ static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS] = {		0,		// clutch ta
 static const uint16_t xClutchReleaseMap[CLUTCH_RELEASE_MAPS][CLUTCH_RELEASE_MAP_POINTS] = {
 
 
-		/* 1:	Basic (Easy)	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 2:	Dry Start 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 3:	Dry Start 2		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 4:	Dry Start 3		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 5:	Dry Start 4		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 6:	Wet Start 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 7:	Wet Start 2		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 8:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 9:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 10:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 11:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 12:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 13:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-		/* 14:	Empty		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
+		/* 1:	Basic (Easy)	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 2:	Dry Start 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 3:	Dry Start 2		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 4:	Dry Start 3		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 5:	Dry Start 4		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 6:	Wet Start 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 7:	Wet Start 2		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 8:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 9:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 10:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 11:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 12:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 13:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 14:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // tShift
 
 static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)
-																200,	// 1st to 2nd
-																200,	// 2nd to 3rd
-																200,	// 3rd to 4th
-																200,	// 4th to 5th
+																100,	// 1st to 2nd
+																100,	// 2nd to 3rd
+																100,	// 3rd to 4th
+																100,	// 4th to 5th
 																0
 };
 

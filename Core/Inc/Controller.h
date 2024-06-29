@@ -10,17 +10,17 @@
 
 #include <Inputs.h>
 
-
-// STRATEGIES
-#define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// spark cut during upshifts
-#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// spark cut during dnshifts
-
+// GEAR STRATEGIES
 #define ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR	1		// allow downshift from 1st to neutral when all Clutch paddle inputs are in error
 #define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
 #define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
-#define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
-#define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
 #define ALLOW_GEARS_WITH_CAR_STOPPED		1		// we allow changing gear with the car stopped and the clutch paddle pressed
+
+// SHIFT STRATEGIES
+#define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// allow spark cut during upshifts strategie, enabled by multifunction
+#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// allow spark cut during dnshifts strategie, enabled by multifunction
+#define ALLOW_CLUTCH_ACT_DURING_UPSHIFT		1		// allow clutch actuation during upshift strategy, enabled by multifunction
+#define ALLOW_CLUTCH_ACT_DURING_DNSHIFT		1		// allow clutch actuation during dnshift strategy, enabled by multifunction
 
 #define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
 
@@ -39,14 +39,13 @@
 
 // CLUTCH PADDLE
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
+#define CLUTCH_PADDLE_ALLOW_OFFSET_MIN		5		// the threshold below (and equal) which we do not apply
+#define CLUTCH_PADDLE_ALLOW_OFFSET_MAX		95		// the threshold below (and equal) which we do not apply
 
 // CLUTCH
-#define xCLUTCH_BITE_POINT					1700	// the clutch bite point
-#define xCLUTCH_REST_POSITION				1500	// the clutch position when not actuated
-#define xCLUTCH_FULLY_ENGAGED				1900	// the fully engaged position of the clutch
-#define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
 #define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
 #define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
+#define xCLUTCH_BITE_POINT					1700	// the clutch bite point
 #define xCLUTCH_TARGET_ACTUATED				1000	// the value at which the clutch is considered as actuated (past the first few mm that it is still engaged)
 
 // MULTIFUNCTION
@@ -56,11 +55,11 @@
 // Max position										//		ATTENTION	!! (do not exceed the array size, currently 14)
 #define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map (select value = 0 to deactivate the map)
 #define MULTIFUNCTION02_MAX_POS				14
-#define MULTIFUNCTION03_MAX_POS				14
+#define MULTIFUNCTION03_MAX_POS				13
 #define MULTIFUNCTION04_MAX_POS				14
-#define MULTIFUNCTION05_MAX_POS				14
-#define MULTIFUNCTION06_MAX_POS				0
-#define MULTIFUNCTION07_MAX_POS				0
+#define MULTIFUNCTION05_MAX_POS				13
+#define MULTIFUNCTION06_MAX_POS				3
+#define MULTIFUNCTION07_MAX_POS				3
 #define MULTIFUNCTION08_MAX_POS				2
 #define MULTIFUNCTION09_MAX_POS				14
 #define MULTIFUNCTION10_MAX_POS				14
@@ -72,9 +71,9 @@
 // Default position
 #define MULTIFUNCTION01_DEF_POS				1		// the default positions of the maps on power up
 #define MULTIFUNCTION02_DEF_POS				1
-#define MULTIFUNCTION03_DEF_POS				1
+#define MULTIFUNCTION03_DEF_POS				7
 #define MULTIFUNCTION04_DEF_POS				1
-#define MULTIFUNCTION05_DEF_POS				1
+#define MULTIFUNCTION05_DEF_POS				7
 #define MULTIFUNCTION06_DEF_POS				1
 #define MULTIFUNCTION07_DEF_POS				1
 #define MULTIFUNCTION08_DEF_POS				1
@@ -86,13 +85,13 @@
 #define MULTIFUNCTION14_DEF_POS				1
 
 // Wrapping Enable
-#define MULTIFUNCTION01_WRAP				0		// 1 to enable wrapping of the each map
+#define MULTIFUNCTION01_WRAP				0		// 1 to enable wrapping of the map
 #define MULTIFUNCTION02_WRAP				0
 #define MULTIFUNCTION03_WRAP				0
-#define MULTIFUNCTION04_WRAP				1
-#define MULTIFUNCTION05_WRAP				1
-#define MULTIFUNCTION06_WRAP				1
-#define MULTIFUNCTION07_WRAP				1
+#define MULTIFUNCTION04_WRAP				0
+#define MULTIFUNCTION05_WRAP				0
+#define MULTIFUNCTION06_WRAP				0
+#define MULTIFUNCTION07_WRAP				0
 #define MULTIFUNCTION08_WRAP				1
 #define MULTIFUNCTION09_WRAP				1
 #define MULTIFUNCTION10_WRAP				1
@@ -102,7 +101,13 @@
 #define MULTIFUNCTION14_WRAP				1
 
 // Multifunction associations
-#define MULTIFUNCTION_CLUTCH_RELEASE_IDX	3	// map 3 (starting from 1) is the one associated to the clutch release maps
+#define MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX		2
+#define MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX	3
+#define MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX	4
+#define MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX	5
+#define MULTIFUNCTION_UPSHIFT_TYPE_IDX			6
+#define MULTIFUNCTION_DNSHIFT_TYPE_IDX			7
+
 
 
 // DISPLAY
@@ -141,6 +146,12 @@ typedef enum _Shifts{
 	Unknown
 }Shifts;
 
+typedef enum _ShiftType{
+	WithClutch,
+	NoClutchNoSparkCut,
+	SparkCut
+}ShiftType;
+
 typedef enum _AntistallState{
 	Off,
 	Init,
@@ -164,7 +175,10 @@ typedef struct {
 	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
 	uint16_t xClutchBitepoint;				// the clutch bite point
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated
+	uint8_t NxClutchPaddleMapIdx;			// the index for the clutch paddle maps
+	uint8_t NxClutchPaddleOffsetIdx;		// the index for the clutch paddle offset
 	uint8_t NxClutchReleaseMapIdx;			// the index for the clutch release maps
+	uint8_t NxClutchReleaseOffsetIdx;		// the index for the clutch release offset
 
 	// SHIFTER
 	uint8_t BUpShiftPortState;				// 1 when the UpShift port is being actuated
@@ -174,6 +188,8 @@ typedef struct {
 	uint16_t NTotalShifts;					// total number of shifts done since power up
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
 	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift
+	uint8_t NUpShiftType;					// UpShift type index selected from the multifunction
+	uint8_t NDnShiftType;					// DpShift type index selected from the multifunction
 
 	// Steering Wheel LED
 	uint8_t BSWLEDA;

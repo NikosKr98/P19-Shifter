@@ -20,6 +20,13 @@ uint8_t NMultifunctionActiveSwitchPrev, NMFIdx;
 // timing variables
 uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer, tControllerErrorStatusShadow;
 
+// Local Variables
+float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the variable used to store the selected clutch map
+
+	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100 },
+	/* Out: xClutchTarget */		{  0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0 }
+};
+
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
 
@@ -33,7 +40,7 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	MyInputs = inputs;
 	MyOutputs = outputs;
 
-	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;
+	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;		// TODO: here we need to put the map
 
 
 	// Multifunction
@@ -150,8 +157,21 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// Manual target mapping
 		if(!MyInputs->BrClutchPaddleInError) {
+
+			// we select the clutch paddle map based on the map index of the multifunction
+			memcpy(rClutchPaddle_xClutchTargetMap[1], rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]], 8);
+
 			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
+
+			// we apply the  clutch paddle offset from the multifunction (inside the desired rClutchPaddle window)
+			if(MyInputs->rClutchPaddle >= CLUTCH_PADDLE_ALLOW_OFFSET_MIN && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_ALLOW_OFFSET_MAX) {
+				MyOutputs->xClutchTargetManual *= MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
+
+				MyOutputs->xClutchTargetManual = (uint16_t)((float)MyOutputs->xClutchTargetManual * rClutchPaddle_xClutchTargetOffsetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]]);
+			}
+
 			// TODO: terminate potential array timed control that runs below
+
 		}
 		else {
 			if(CheckEvent(DECLUTCH_RELEASE_EVT)) {
@@ -179,7 +199,6 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		MyOutputs->BSWLEDB = MyInputs->NToggleSwitch02State;
 		MyOutputs->BSWLEDC = MyInputs->NToggleSwitch03State;
 
-
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// MULTIFUNCTION
@@ -194,7 +213,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
 			MyOutputs->BUseButtonsForMultifunction = 1;
 			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
-			// TODO: not sure if better to change the page number here and then return it to the previous one
+			// TODO: not sure if better to change the page number here (in case we use a dedicated page for the multifunction, instead of the pop up) and then return it to the previous one
 		}
 
 		// + Button (next position)
@@ -212,7 +231,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		else if(!MyOutputs->BMultifunctionNextPos) {
 			MyOutputs->BMultifunctionNextPosState = 0;
 		}
-
+		// - Button (previous position)
 		if(MyOutputs->BMultifunctionPrevPos && (MyOutputs->tMultifunctionActiveOnRot >= tControllerTimmer || ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) && !MyOutputs->BMultifunctionPrevPosState) {
 			MyOutputs->BMultifunctionPrevPosState = 1;
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
@@ -235,7 +254,13 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 
 		// Here we assign the various multifunction maps to the various indexes
-		MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_IDX-1];
+		MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1];
+		MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
+		MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1];
+		MyOutputs->NxClutchReleaseOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1];
+		MyOutputs->NUpShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1];
+		MyOutputs->NDnShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1];
+
 		// TODO: fill the rest...
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -406,7 +431,7 @@ void PRE_UPSHIFT_Event(void) {
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear + 1;											// we go to the next gear
 
-		if(CLUTCH_ACTUATION_DURING_UPSHIFT || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
+		if((MyOutputs->NUpShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_UPSHIFT) || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShift = xClutchTargetUpShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextUpShift = 0; 									// reset the strat for the next gear
 		}
@@ -414,7 +439,7 @@ void PRE_UPSHIFT_Event(void) {
 			MyOutputs->xClutchTargetShift = 0;
 		}
 
-		if(ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
+		if(MyOutputs->NUpShiftType == SparkCut && ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
 
 		PRE_UPSHIFT_Exit();
 		SHIFTING_Entry();
@@ -437,7 +462,7 @@ void PRE_UPSHIFT_Run(void) {
 	}
 	else { ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift up with too low rpm
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0 && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
@@ -472,7 +497,7 @@ void PRE_DNSHIFT_Event(void) {
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
 
-		if(CLUTCH_ACTUATION_DURING_DNSHIFT || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
+		if((MyOutputs->NDnShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_DNSHIFT) || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextDnShift = 0; 									// reset the strat for the next gear
 		}
@@ -480,7 +505,7 @@ void PRE_DNSHIFT_Event(void) {
 			MyOutputs->xClutchTargetShift = 0;
 		}
 
-		if(ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
+		if(MyOutputs->NDnShiftType == SparkCut && ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
 
 		PRE_DNSHIFT_Exit();
 		SHIFTING_Entry();
@@ -502,7 +527,7 @@ void PRE_DNSHIFT_Run(void) {
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift down with too high rpm
+	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0 && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift down with too high rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_DNSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_DNSHIFT); }

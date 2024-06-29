@@ -162,7 +162,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// Analog Input & Mapping
 	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog02;
-	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_PADDLE_MARGIN_MIN, VrCLUTCH_PADDLE_MARGIN_MAX);
+	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchPaddleMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_PADDLE_MARGIN_MIN, VrCLUTCH_PADDLE_MARGIN_MAX);
 
 
 	// Clutch Paddle Input Strategy

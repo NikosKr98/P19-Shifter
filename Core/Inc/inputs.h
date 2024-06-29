@@ -28,13 +28,13 @@
 #define VUPDN_DEBOUNCE							50		// debounce time for analog reading
 
 // GEAR
-#define NGEAR_INERROR_DEFAULT					1		// default value when the gear input is in error
+#define NGEAR_INERROR_DEFAULT					2		// default value when the gear input is in error
 #define VNGEAR_MARGIN_MIN 						0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
 #define VNGEAR_MARGIN_MAX 						0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define FALSE_NEUTRAL_DEBOUNCE					40		// time to leave before detecting and declaring a false neutral
 
 // CLUTCH
-#define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if evey input is in error
+#define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if every input is in error
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 		80		// Threshold % to consider Clutch Paddle as pressed
 #define CLUTCH_PADDLE_RELEASED_THRESHOLD		0		// Threshold % to consider Clutch Paddle as released
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
@@ -53,7 +53,7 @@
 #define DRIVER_KILL_DEBOUNCE					200		// debouncing for digital read
 
 // ENGINE RPM
-#define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
+#define nENGINE_IN_ERROR_DEFAULT				0		// the default nEngine value if the input is in error
 
 // CAN
 #define SIU_TX_ID01								0x310
