@@ -19,9 +19,10 @@ uint8_t NMultifunctionActiveSwitchPrev, NMFIdx;
 
 // timing variables
 uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer, tControllerErrorStatusShadow;
+uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
 
 // Local Variables
-float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the variable used to store the selected clutch map
+float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the variable used to store the selected clutch map, intentionally left empty
 
 	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100 },
 	/* Out: xClutchTarget */		{  0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0 }
@@ -39,9 +40,6 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 
 	MyInputs = inputs;
 	MyOutputs = outputs;
-
-	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;		// TODO: here we need to put the map
-
 
 	// Multifunction
 
@@ -129,7 +127,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 					// Activation
 					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 						MyOutputs->NAntistallState = Active;
-						MyOutputs->xClutchTargetProtection = xCLUTCH_ABSOLUTE_MAX;
+						MyOutputs->xClutchTargetProtection = CLUTCH_ABSOLUTE_MAX;
 					}
 				}
 				// Not activation due to engine rpm returning over the limit, or early clutch paddle press
@@ -189,15 +187,41 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// from the driver and the shifter requests when enabled from the respective strategy
 		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
-		MyOutputs->BClutchActuated = (MyOutputs->xClutchTarget >= xCLUTCH_TARGET_ACTUATED ? 1 : 0);
+		MyOutputs->BClutchActuated = (MyOutputs->xClutchTarget >= CLUTCH_TARGET_ACTUATED ? 1 : 0);
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	// TOGGLE SWITCHES & LEDS
+	// TOGGLE SWITCHES
 
-		MyOutputs->BSWLEDA = MyInputs->NToggleSwitch01State;
-		MyOutputs->BSWLEDB = MyInputs->NToggleSwitch02State;
-		MyOutputs->BSWLEDC = MyInputs->NToggleSwitch03State;
+		// Toggle 1
+		if(TOGGLE_SWITCH01_BUTTON && tToggleSwitch01 < tControllerTimmer) {
+			MyOutputs->NToggleSwitch01State ^= 1;
+			tToggleSwitch01 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
+		}
+
+		// Toggle 2
+		if(TOGGLE_SWITCH02_BUTTON && tToggleSwitch02 < tControllerTimmer) {
+			MyOutputs->NToggleSwitch02State ^= 1;
+			tToggleSwitch02 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
+		}
+
+		// Toggle 3
+		if(TOGGLE_SWITCH03_BUTTON && tToggleSwitch03 < tControllerTimmer) {
+			MyOutputs->NToggleSwitch03State ^= 1;
+			tToggleSwitch03 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
+		}
+
+		// Toggle 4
+	//	if(TOGGLE_SWITCH04_BUTTON && tToggleSwitch04 < tControllerTimmer) {
+	//		inputs->NToggleSwitch04State ^= 1;
+	//		tToggleSwitch04 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
+	//	}
+
+// TODO: remember that if you want to use a toggle to modify maps from the multifunction, you must set the override to 1 in order to temporarily deactivate the switch from  modifying them
+
+		MyOutputs->BSWLEDA = MyOutputs->NToggleSwitch01State;
+		MyOutputs->BSWLEDB = MyOutputs->NToggleSwitch02State;
+		MyOutputs->BSWLEDC = MyOutputs->NToggleSwitch03State;
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -213,7 +237,9 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
 			MyOutputs->BUseButtonsForMultifunction = 1;
 			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
-			// TODO: not sure if better to change the page number here (in case we use a dedicated page for the multifunction, instead of the pop up) and then return it to the previous one
+
+			MyOutputs->NDispalyPagePrev = MyOutputs->NDispalyPage;	// we save and change the page number here
+			MyOutputs->NDispalyPage = DISPLAY_MULTIFUNCTION_PAGE;
 		}
 
 		// + Button (next position)
@@ -249,17 +275,18 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer) {
 			MyOutputs->BUseButtonsForMultifunction = 0;
-			// TODO: and here to return to the actual page
+			// here we return to the actual page
+			MyOutputs->NDispalyPage = MyOutputs->NDispalyPagePrev;
 		}
 
 
 		// Here we assign the various multifunction maps to the various indexes
-		MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1];
-		MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
-		MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1];
-		MyOutputs->NxClutchReleaseOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1];
-		MyOutputs->NUpShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1];
-		MyOutputs->NDnShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]) MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]) MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1]) MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1]) MyOutputs->NxClutchReleaseOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1]) MyOutputs->NUpShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1]) MyOutputs->NDnShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1];
 
 		// TODO: fill the rest...
 
@@ -276,7 +303,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			if(!MyOutputs->BUseButtonsForMultifunction) {	// we only use them as page buttons when they are not used for the multifunction
 				if(MyOutputs->BDisplayPageNext && (MyOutputs->tDisplayPageDebounce < tControllerTimmer) && !MyOutputs->BDisplayPageNextState) {
 					MyOutputs->BDisplayPageNextState = 1;
-					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_DEBOUNCE;
+					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_BUTTON_DEBOUNCE;
 
 					MyOutputs->NDispalyPage ++;
 					MyOutputs->NDispalyPage %= DISPLAY_MAX_PAGE;
@@ -288,7 +315,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 				if(MyOutputs->BDisplayPagePrev && (MyOutputs->tDisplayPageDebounce < tControllerTimmer) && !MyOutputs->BDisplayPagePrevState) {
 					MyOutputs->BDisplayPagePrevState = 1;
-					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_DEBOUNCE;
+					MyOutputs->tDisplayPageDebounce = tControllerTimmer + DISPLAY_PAGE_BUTTON_DEBOUNCE;
 
 					MyOutputs->NDispalyPage --;
 					if(MyOutputs->NDispalyPage < 0) MyOutputs->NDispalyPage = DISPLAY_MAX_PAGE - 1;
@@ -345,10 +372,10 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		MyOutputs->NControllerStatusWord |= MyOutputs->BLaunchControl					<<4;
 		MyOutputs->NControllerStatusWord |= (MyOutputs->NAntistallState == 2 ? 1 : 0)	<<5;
 		MyOutputs->NControllerStatusWord |= MyOutputs->BShiftingInProgress				<<6;
-		MyOutputs->NControllerStatusWord |= 0											<<7;
-		MyOutputs->NControllerStatusWord |= 0											<<8;
-		MyOutputs->NControllerStatusWord |= 0											<<9;
-		MyOutputs->NControllerStatusWord |= 0											<<10;
+		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch01State				<<7;
+		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch02State				<<8;
+		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch03State				<<9;
+		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch04State				<<10;
 		MyOutputs->NControllerStatusWord |= 0											<<11;
 		MyOutputs->NControllerStatusWord |= 0											<<12;
 		MyOutputs->NControllerStatusWord |= 0											<<13;
@@ -664,6 +691,8 @@ void ERROR_Entry(void) {
 	// TODO: we need to open a led to indicate the Error State !!!
 	// or send it to the display via CAN
 
+	// TODO: we set the page number to ERROR page and then we need to create a timeout in order to return to normal page operation
+
 	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
@@ -685,12 +714,12 @@ void ERROR_Event(void) {
 	// remember return in all functions
 
 	// Remember to create the Strategy (and a way to exit the error) to be able to function without NGear (complete open loop)
+	// for now we exit with no condition
+	ERROR_Exit();
+	IDLE_Entry();
 }
 void ERROR_Run(void) {
 
 	MyOutputs->NControlErrorStatus = 0;
-
-
-	// TODO: find a way to read the Control Errors and then reset them in order to clear them for the next cycle
 
 }

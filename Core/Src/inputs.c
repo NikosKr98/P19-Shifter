@@ -13,7 +13,6 @@
 
 // Timing variables
 uint32_t tInputsTimmer;
-uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
 uint32_t tBDriverKillTimer, tBFalseNeutral, tVUpDn;
 
 // I/O Flags
@@ -289,34 +288,6 @@ void ReadInputs(InputStruct *inputs){
 	inputs->NSwitchA = CLAMP((uint8_t)round(inputs->NSwitchARaw), 1, SWITCHA_MAP_SIZE);
 
 	// ---------------------------------------------------------------------------------------------------
-	// Toggle Switches
-
-	// Toggle 1
-	if(inputs->BSWButtonE && tToggleSwitch01 < tInputsTimmer) {
-		inputs->NToggleSwitch01State ^= 1;
-		tToggleSwitch01 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 2
-	if(inputs->BSWButtonA && tToggleSwitch02 < tInputsTimmer) {
-		inputs->NToggleSwitch02State ^= 1;
-		tToggleSwitch02 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 3
-	if(inputs->BSWButtonB && tToggleSwitch03 < tInputsTimmer) {
-		inputs->NToggleSwitch03State ^= 1;
-		tToggleSwitch03 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 4
-//	if(inputs->BSWButtonE && tToggleSwitch04 < tInputsTimmer) {
-//		inputs->NToggleSwitch04State ^= 1;
-//		tToggleSwitch04 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-//	}
-
-
-	// ---------------------------------------------------------------------------------------------------
 	// PCB Supply Voltage
 
 	inputs->VSupply = inputs->VSHIFTERAnalog01 / VSUPPLY_DIVIDER_GAIN;
@@ -426,10 +397,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->NInputsStatusWord |= inputs->BUpShiftRequest 				<< 17;
 	inputs->NInputsStatusWord |= inputs->BDnShiftRequest 				<< 18;
 	inputs->NInputsStatusWord |= inputs->BFalseNeutral	 				<< 19;
-	inputs->NInputsStatusWord |= inputs->NToggleSwitch01State			<< 20;
-	inputs->NInputsStatusWord |= inputs->NToggleSwitch02State			<< 21;
-	inputs->NInputsStatusWord |= inputs->NToggleSwitch03State			<< 22;
-	inputs->NInputsStatusWord |= inputs->NToggleSwitch04State			<< 23;
+	inputs->NInputsStatusWord |= 0										<< 20;
+	inputs->NInputsStatusWord |= 0										<< 21;
+	inputs->NInputsStatusWord |= 0										<< 22;
+	inputs->NInputsStatusWord |= 0										<< 23;
 	inputs->NInputsStatusWord |= inputs->BLaunchRequest	 				<< 24;
 	inputs->NInputsStatusWord |= inputs->BDeclutchRequest 				<< 25;
 	inputs->NInputsStatusWord |= (inputs->NrClutchPaddleSource & 0x02)	<< 26;	// 2 bits (26,27)

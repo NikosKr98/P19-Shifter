@@ -43,9 +43,6 @@
 #define VrCLUTCH_PADDLE_MARGIN_MAX 				0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define rCLUTCH_ON_DECLUTCH						100		// the desired clutch percentage when pressing the delutch button
 
-// TOGGLE SWITCHES
-#define TOGGLE_SWITCH_DEBOUNCE					1000	// time interval for next toggle
-
 // Rotary Switch
 #define VNSWITCH_MARGIN							0.1f	// the voltage above and below the map voltage we accept to arrive before declaring out of bounds
 
@@ -168,12 +165,6 @@ typedef struct _InputStruct {
 	// DECLUTCH
 	uint8_t BDeclutchRequestInError;		// 1 if steering wheel CAN is in error or not fitted
 	uint8_t BDeclutchRequest;				// De-Clutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
-
-	// Toggle Switches
-	uint8_t NToggleSwitch01State;
-	uint8_t NToggleSwitch02State;
-	uint8_t NToggleSwitch03State;
-	uint8_t NToggleSwitch04State;
 
 	// Rotary Switch
 	float VSwhitchA;						// the voltage of the rotary Switch A

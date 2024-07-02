@@ -43,10 +43,10 @@
 #define CLUTCH_PADDLE_ALLOW_OFFSET_MAX		95		// the threshold below (and equal) which we do not apply
 
 // CLUTCH
-#define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
-#define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
-#define xCLUTCH_BITE_POINT					1700	// the clutch bite point
-#define xCLUTCH_TARGET_ACTUATED				1000	// the value at which the clutch is considered as actuated (past the first few mm that it is still engaged)
+#define CLUTCH_ABSOLUTE_MIN					900		// min clutch position value
+#define CLUTCH_ABSOLUTE_MAX					2100	// max clutch position value
+#define CLUTCH_BITE_POINT					1700	// the clutch bite point
+#define CLUTCH_TARGET_ACTUATED				1000	// the value at which the clutch is considered as actuated (past the first few mm that it is still engaged)
 
 // MULTIFUNCTION
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
@@ -108,12 +108,25 @@
 #define MULTIFUNCTION_UPSHIFT_TYPE_IDX			6
 #define MULTIFUNCTION_DNSHIFT_TYPE_IDX			7
 
-
+// TOGGLE SWITCHES
+#define TOGGLE_SWITCH_DEBOUNCE				1000	// time interval for next toggle
+#define TOGGLE_SWITCH01_BUTTON				inputs->BSWButtonE
+#define TOGGLE_SWITCH02_BUTTON				inputs->BSWButtonA
+#define TOGGLE_SWITCH03_BUTTON				inputs->BSWButtonB
+#define TOGGLE_SWITCH04_BUTTON				inputs->BSWButtonB
 
 // DISPLAY
 #define DISPLAY_MAX_PAGE					5		// the maximum page number we have in the screen, not the index
-#define DISPLAY_PAGE_DEBOUNCE				300		// debounce time for consecutive page changes
+#define DISPLAY_PAGE_BUTTON_DEBOUNCE		200		// debounce time for consecutive page changes
 #define CONTROLLER_STATUS_SHADOW_REFRESH	1000	// the time we accumulate all controller errors before zeroing them (for display reasons)
+
+#define DISPLAY_MULTIFUNCTION_PAGE			6		// the pop up multifunction page
+#define DISPLAY_ERROR_PAGE					7		// the pop up error page
+#define DISPLAY_CLUTCH_PAGE					8		// the pop up page on clutch paddle activation
+
+#define DISPLAY_ERROR_PAGE_INTERVAL			1500	// the time the error page will be active in the screen on every error occurrence
+#define DISPLAY_CLUTCH_PAGE_INTERVAL		1000	// the time the clutch paddle page will be active in the screen while the clutch paddle value is inside the defined limits
+#define DISPLAY_CLUTCH_PAGE_CLUTCH_MIN		5		// the min clutch paddle value to enter the clutch screen and the min to exit after the interval
 
 // STATE MACHINE STATES
 typedef enum _States {
@@ -197,8 +210,15 @@ typedef struct {
 	uint8_t BSWLEDC;
 	uint8_t BSWLEDD;
 
+	// Toggle Switches
+	uint8_t NToggleSwitch01State;
+	uint8_t NToggleSwitch02State;
+	uint8_t NToggleSwitch03State;
+	uint8_t NToggleSwitch04State;
+
 	// Display Buttons & control
 	int8_t NDispalyPage;					// the currently selected display page
+	int8_t NDispalyPagePrev;				// the previous page, used for smart page switching
 	uint8_t NDisplayFlags;					// flags for display messages and diagnostics
 	uint8_t BDisplayPageNext;				// the button state from the input structure
 	uint8_t BDisplayPagePrev;				// the button state from the input structure
@@ -217,7 +237,7 @@ typedef struct {
 	int8_t NMultifunction[NMF];				// the currently selected values for each map
 	uint8_t BMultifunctionWrap[NMF];		// if it contains 1 we allow the overflow of the map (from last we go to first with next button pressed)
 	uint8_t NMultifunctionMaxPos[NMF];		// the size of each map, used for wrapping and general control
-
+	uint8_t BMultifunctionOverride[NMF];	// if a position contains 1 the mapped function does not get changed by the multifunction, used for toggles and for bloching strategies
 	uint32_t tMultifunctionActiveOnRot;		// the time the screen shows the multifunction map position and value & the time the SW buttons function as +/- instead of display page control
 	uint8_t BUseButtonsForMultifunction;	// a flag to indicate the use of the +/- buttons for multifunction and display page control
 
