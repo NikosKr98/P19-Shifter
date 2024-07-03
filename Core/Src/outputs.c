@@ -6,14 +6,15 @@
  */
 
 #include <Outputs.h>
+#include <Maps.h>
 
 // CAN
 uint32_t nCanTxErrorCount=0;
 uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
 
-// CLUTCH
+// SERVO
 uint16_t xClutchTargetOut;
-
+uint16_t rServoDemand;
 
 // PWM
 // Timer Parameters
@@ -35,7 +36,9 @@ void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data);
 
 void InitOutputs(void) {
 
-	// TODO: start the timer with initial target (CLUTCH_REST_POSITION) the released value (make the #define and also use it in the maps??)
+	// we start the timer with initial target (CLUTCH_REST_POSITION) the released value (make the #define and also use it in the maps??)
+	__HAL_TIM_SET_AUTORELOAD(&htim1, (CLUTCH_SERVO_ABSOLUTE_MIN*2) -1 );
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, (CLUTCH_SERVO_ABSOLUTE_MIN*2)/2);
 
 	// set the duty cycle to 0 before enabling the PWM in order to avoid unwanted movement
 	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, 0);
@@ -48,22 +51,30 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 
 	// CLUTCH
 
+	// we convert from mm to timer prescaler
+	My2DMapInterpolate(CLUTCH_SERVO_MAP_SIZE, xClutchTarget_rServoDemand, outputs->xClutchTarget, &outputs->rServoDemandRaw, CLUTCH_TARGET_MIN_MARGIN, CLUTCH_TARGET_MAX_MARGIN);
+
+	// convert from float to uint16_t
+	outputs->rServoDemand  =(uint16_t)round(outputs->rServoDemandRaw);
+
 	// Clamping to avoid out of bounds values
-	xClutchTargetOut = CLAMP(outputs->xClutchTarget, CLUTCH_ABSOLUTE_MIN, CLUTCH_ABSOLUTE_MAX);
+	outputs->rServoDemand = CLAMP(outputs->rServoDemand, CLUTCH_SERVO_ABSOLUTE_MIN, CLUTCH_SERVO_ABSOLUTE_MAX);
+
+	// Actuated flag (it will be applied on the next cycle because it gets saved in the controller)
+	outputs->BClutchActuated = (outputs->rServoDemand >= CLUTCH_SERVO_ACTUATED ? 1 : 0);
 
 	// The output for the clutch servo is a +5V (or 3.3V) pulse 50% duty cycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
-
 	// we double the auto reload counter to multiply the frequency by 2
 	// (the servo expects the pulse to be 900 - 2100 usec) so the period of the pulse needs to be the double,
 	//since the duty cycle is 50%)
-	xClutchTargetOut *= 2;
+	outputs->rServoDemand *= 2;
 
 	// think about not putting the duty cycle at 50% but to try and fine tune the compare and autoreload.
 	// think about the auto preload function. It is now enabled, is it correct?
 	// update the Timer Registers, using the TIM_Exported_Macros
 	//__HAL_TIM_SET_PRESCALER(&htim1, nTimerPrescaler - 1);
-	__HAL_TIM_SET_AUTORELOAD(&htim1, xClutchTargetOut -1 );
-	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, xClutchTargetOut/2);
+	__HAL_TIM_SET_AUTORELOAD(&htim1, outputs->rServoDemand -1 );
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, outputs->rServoDemand/2);
 
 
 	// Shifting
@@ -91,7 +102,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 
 	TxData[0] = inputs->NGear;
 	TxData[1] = inputs->rClutchPaddle;
-	TxData[2] = (uint8_t)(outputs->xClutchTarget >> 8);
+	TxData[2] = (uint8_t)(outputs->xClutchTarget * 10) >> 8;
 	TxData[3] = (uint8_t)outputs->xClutchTarget;
 	TxData[4] = (uint8_t)(inputs->nEngine >> 8);
 	TxData[5] = (uint8_t)inputs->nEngine;

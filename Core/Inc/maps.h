@@ -15,16 +15,26 @@
 
 #define CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
 
-#define CLUTCH_PADDLE_MAP_SIZE	2
-#define SWITCHA_MAP_SIZE		14
+#define CLUTCH_PADDLE_MAP_SIZE				2
+#define SWITCHA_MAP_SIZE					14
+#define CLUTCH_SERVO_MAP_SIZE				2
 
-#define CLUTCH_PADDLE_MAP_MAX		104
-#define CLUTCH_PADDLE_MAP_MIN		-4
+#define CLUTCH_PADDLE_MAP_MAX				104
+#define CLUTCH_PADDLE_MAP_MIN				-4
 
-#define CLUTCH_PADDLE_MAPS 14
-#define CLUTCH_PADDLE_MAP_OFFSETS 13
-#define CLUTCH_RELEASE_MAPS 14
-#define CLUTCH_RELEASE_MAP_POINTS	20
+#define CLUTCH_PADDLE_MAPS 					14
+#define CLUTCH_PADDLE_MAP_OFFSETS 			13
+#define CLUTCH_RELEASE_MAPS 				14
+#define CLUTCH_RELEASE_MAP_POINTS			20
+
+#define CLUTCH_TARGET_MIN_DEF				0		// the default min clutch target
+#define CLUTCH_TARGET_MAX_DEF				5		// the default max clutch target
+
+#define CLUTCH_SERVO_MIN					1450
+#define CLUTCH_SERVO_MAX					1600
+#define CLUTCH_SERVO_ABSOLUTE_MIN			1400
+#define CLUTCH_SERVO_ABSOLUTE_MAX			1700
+#define CLUTCH_SERVO_ACTUATED				1480
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // NGEAR
 
@@ -88,6 +98,36 @@ static const float NSWitchAmap[2][SWITCHA_MAP_SIZE] = {
 };
 
 
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Clutch - SERVO
+
+
+static const float xClutchTarget_rServoDemand[2][CLUTCH_SERVO_MAP_SIZE] = {
+
+		/* In:  xClutchTarget	*/	{ 	CLUTCH_TARGET_MIN_DEF  , 	CLUTCH_TARGET_MAX_DEF  },
+		/* Out: rServoDemand	*/	{ CLUTCH_SERVO_ABSOLUTE_MAX, CLUTCH_SERVO_ABSOLUTE_MIN }
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// tShift
+
+static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)
+																100,	// 1st to 2nd
+																100,	// 2nd to 3rd
+																100,	// 3rd to 4th
+																100,	// 4th to 5th
+																0
+};
+
+
+static const uint32_t tDnShift[TOTAL_GEARS] = {					0,		// gear valve activation time (ms)
+																10,		// 1st to neutral
+																200,	// 2nd to 1st
+																200,	// 3rd to 2nd
+																200,	// 4th to 3rd
+																200		// 5th to 4th
+};
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // nEngine
@@ -154,26 +194,6 @@ static const uint16_t xClutchReleaseMap[CLUTCH_RELEASE_MAPS][CLUTCH_RELEASE_MAP_
 		/* 12:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* 13:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* 14:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-};
-
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-// tShift
-
-static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)
-																100,	// 1st to 2nd
-																100,	// 2nd to 3rd
-																100,	// 3rd to 4th
-																100,	// 4th to 5th
-																0
-};
-
-
-static const uint32_t tDnShift[TOTAL_GEARS] = {					0,		// gear valve activation time (ms)
-																10,		// 1st to neutral
-																200,	// 2nd to 1st
-																200,	// 3rd to 2nd
-																200,	// 4th to 3rd
-																200		// 5th to 4th
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

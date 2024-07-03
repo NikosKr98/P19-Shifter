@@ -43,10 +43,12 @@
 #define CLUTCH_PADDLE_ALLOW_OFFSET_MAX		95		// the threshold below (and equal) which we do not apply
 
 // CLUTCH
-#define CLUTCH_ABSOLUTE_MIN					900		// min clutch position value
-#define CLUTCH_ABSOLUTE_MAX					2100	// max clutch position value
+
 #define CLUTCH_BITE_POINT					1700	// the clutch bite point
-#define CLUTCH_TARGET_ACTUATED				1000	// the value at which the clutch is considered as actuated (past the first few mm that it is still engaged)
+//#define CLUTCH_TARGET_MIN_DEF				0		// the default min clutch target
+//#define CLUTCH_TARGET_MAX_DEF				5		// the default max clutch target
+#define CLUTCH_TARGET_MIN_MARGIN			0		// the margin that we accept for the servo demand map, below the map's min value
+#define CLUTCH_TARGET_MAX_MARGIN			1		// the margin that we accept for the servo demand map, abovbe the map's maximum value
 
 // MULTIFUNCTION
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
@@ -182,11 +184,13 @@ typedef struct {
 	uint8_t NGearTarget;					// target gear for the controller
 
 	// CLUTCH
-	uint16_t xClutchTargetProtection;		// the clutch target opening requested from the protection/antistall strategy
+	float xClutchTargetProtection;			// the clutch target opening requested from the protection/antistall strategy
 	float xClutchTargetManual;				// the clutch target opening requested from the clutch pad
-	uint16_t xClutchTargetShift;			// the clutch target opening requested from the shift control
-	uint16_t xClutchTarget;					// the clutch target opening used for the servo control
-	uint16_t xClutchBitepoint;				// the clutch bite point
+	float xClutchTargetShift;				// the clutch target opening requested from the shift control
+	float xClutchTarget;					// the clutch target opening used for the servo control
+	float xClutchBitepoint;					// the clutch bite point
+	float xClutchTargetMin;					// the min opening point (can be changed from multifunction and strategies)
+	float xClutchTargetMax;					// the max opening point (can be changed from multifunction and strategies)
 	uint8_t BClutchActuated;				// 1 when the clutch is being actuated
 	uint8_t NxClutchPaddleMapIdx;			// the index for the clutch paddle maps
 	uint8_t NxClutchPaddleOffsetIdx;		// the index for the clutch paddle offset
@@ -250,6 +254,10 @@ typedef struct {
 	uint8_t BOverrideActuateClutchOnNextUpShift;	// if one it will actuate the clutch on the next UpShift, then it gets automatically disabled
 	uint8_t BOverrideActuateClutchOnNextDnShift;	// if one it will actuate the clutch on the next DnShift, then it gets automatically disabled
 	AntistallState NAntistallState;			// the state of the antistall strategy
+
+	// SERVO OUTPUT
+	float rServoDemandRaw;					// the raw timer value from the map interpolation
+	uint16_t rServoDemand;					// the timer value we use to command the SERVO PWM
 
 	// PID Control
 	uint8_t BPIDRunning;					// 1 when the PID controller is running

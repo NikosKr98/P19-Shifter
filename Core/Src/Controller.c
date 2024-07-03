@@ -99,6 +99,9 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 		outputs->NMultifunction[i] = outputs->NMultifunctionDefMask[i];
 	}
 
+	// we initialize the min & max clutch targets, later they can be modified with the multifunction
+	MyOutputs->xClutchTargetMin = CLUTCH_TARGET_MIN_DEF;
+	MyOutputs->xClutchTargetMax = CLUTCH_TARGET_MAX_DEF;
 
 	IDLE_Entry();
 }
@@ -127,24 +130,24 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 					// Activation
 					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 						MyOutputs->NAntistallState = Active;
-						MyOutputs->xClutchTargetProtection = CLUTCH_ABSOLUTE_MAX;
+						MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMax;
 					}
 				}
 				// Not activation due to engine rpm returning over the limit, or early clutch paddle press
 				if(MyOutputs->NAntistallState == Init && (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear] || MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED)) {
 					MyOutputs->NAntistallState = Off;
-					MyOutputs->xClutchTargetProtection = 0;
+					MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMin;
 				}
 				// De-activation by Clutch paddle press
 				if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
 					MyOutputs->NAntistallState = Off;
-					MyOutputs->xClutchTargetProtection = 0;
+					MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMin;
 				}
 			}
 			// De-activation by Driver Kill or Neutral or Errors
 			else {
 				MyOutputs->NAntistallState = Off;
-				MyOutputs->xClutchTargetProtection = 0;
+				MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMin;
 			}
 
 		#endif
@@ -163,9 +166,8 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 			// we apply the  clutch paddle offset from the multifunction (inside the desired rClutchPaddle window)
 			if(MyInputs->rClutchPaddle >= CLUTCH_PADDLE_ALLOW_OFFSET_MIN && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_ALLOW_OFFSET_MAX) {
-				MyOutputs->xClutchTargetManual *= MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
 
-				MyOutputs->xClutchTargetManual = (uint16_t)((float)MyOutputs->xClutchTargetManual * rClutchPaddle_xClutchTargetOffsetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]]);
+				MyOutputs->xClutchTargetManual *= rClutchPaddle_xClutchTargetOffsetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]];
 			}
 
 			// TODO: terminate potential array timed control that runs below
@@ -185,9 +187,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// we take the maximum target generated from the Antistall/Protection strategy, the one request
 		// from the driver and the shifter requests when enabled from the respective strategy
-		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
-
-		MyOutputs->BClutchActuated = (MyOutputs->xClutchTarget >= CLUTCH_TARGET_ACTUATED ? 1 : 0);
+		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 

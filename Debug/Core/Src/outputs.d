@@ -28,7 +28,7 @@ Core/Src/outputs.o: ../Core/Src/outputs.c ../Core/Inc/Outputs.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- ../Core/Inc/main.h
+ ../Core/Inc/main.h ../Core/Inc/Maps.h
 
 ../Core/Inc/Outputs.h:
 
@@ -95,3 +95,5 @@ Core/Src/outputs.o: ../Core/Src/outputs.c ../Core/Inc/Outputs.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
 
 ../Core/Inc/main.h:
+
+../Core/Inc/Maps.h:

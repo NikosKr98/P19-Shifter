@@ -1,3 +1,3 @@
-outputs.c:36:6:InitOutputs	8	static
-outputs.c:45:6:WriteOutputs	24	static
-outputs.c:163:6:CAN_TX	56	static
+outputs.c:37:6:InitOutputs	8	static
+outputs.c:48:6:WriteOutputs	32	static
+outputs.c:174:6:CAN_TX	56	static
