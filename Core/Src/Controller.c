@@ -18,11 +18,11 @@ Shifts NShiftRequest;
 uint8_t NMultifunctionActiveSwitchPrev, NMFIdx;
 
 // timing variables
-uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tPostShiftTimer, tAntistallTimmer, tControllerErrorStatusShadow;
+uint32_t tControllerTimmer, tPreShiftTimer, tShiftTimer, tShifterMaxTransitTime, tShifterDelayForClutch, tShifterGearMatch, tPostShiftTimer, tAntistallTimmer, tControllerErrorStatusShadow;
 uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
 
 // Local Variables
-float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the variable used to store the selected clutch map, intentionally left empty
+float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_SIZE] = { // the variable used to store the selected clutch map, intentionally left empty
 
 	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100 },
 	/* Out: xClutchTarget */		{  0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0 }
@@ -119,7 +119,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		#ifdef ANTISTALL_ENABLED
 
 			// if the shut down is activated and we are at gear greater than neutral we can enter
-			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftingInProgress && !MyInputs->BFalseNeutral) {
+			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftInProgress && !MyInputs->BFalseNeutral) {
 
 				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
 					// Timer initialization of enable strategy
@@ -149,7 +149,8 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 				MyOutputs->NAntistallState = Off;
 				MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMin;
 			}
-
+		#elif
+			MyOutputs->xClutchTargetProtection = MyOutputs->xClutchTargetMin;
 		#endif
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -159,14 +160,23 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		// Manual target mapping
 		if(!MyInputs->BrClutchPaddleInError) {
 
-			// we select the clutch paddle map based on the map index of the multifunction
-			memcpy(rClutchPaddle_xClutchTargetMap[1], rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]], 8);
+			// we select the clutch paddle map based on the map index of the multifunction and copy it to the local array
+			memcpy((float*)rClutchPaddle_xClutchTargetMap[1], (float*)rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]], CLUTCH_PADDLE_TARGET_MAP_SIZE);
 
-			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
+			// we dynamically refine the clutch map
+			for(uint8_t i=0; i<CLUTCH_PADDLE_TARGET_MAP_SIZE; i++) {
+
+				// we clamp the xClutchTargetMap, to keep it inside the the min & max limits (dynamic) and
+				rClutchPaddle_xClutchTargetMap[1][i] = CLAMP(rClutchPaddle_xClutchTargetMap[1][i], MyOutputs->xClutchTargetMin, MyOutputs->xClutchTargetMax);
+
+				// we force the last element to the max clutch aperture
+				if(i == CLUTCH_PADDLE_TARGET_MAP_SIZE-1) rClutchPaddle_xClutchTargetMap[1][i] = MyOutputs->xClutchTargetMax;
+			}
+
+			My2DMapInterpolate(CLUTCH_PADDLE_TARGET_MAP_SIZE, rClutchPaddle_xClutchTargetMap, MyInputs->rClutchPaddle, &MyOutputs->xClutchTargetManual, 0, 0);
 
 			// we apply the  clutch paddle offset from the multifunction (inside the desired rClutchPaddle window)
 			if(MyInputs->rClutchPaddle >= CLUTCH_PADDLE_ALLOW_OFFSET_MIN && MyInputs->rClutchPaddle <= CLUTCH_PADDLE_ALLOW_OFFSET_MAX) {
-
 				MyOutputs->xClutchTargetManual *= rClutchPaddle_xClutchTargetOffsetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]];
 			}
 
@@ -174,12 +184,15 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		}
 		else {
+			MyOutputs->xClutchTargetManual = MyOutputs->xClutchTargetMin;
+
 			if(CheckEvent(DECLUTCH_RELEASE_EVT)) {
 				// TODO: run the release array. here we initialize it
 				// create lookup table running request for accel and emergency clutchButton release
 				// xClutchReleaseMap[MyOutputs->NxClutchReleaseMapIdx][0..1..2..3....]
 			}
 			// TODO: Here we keep timers and counter and the state of the mini control and put the values in xClutchTargetManual
+			// if the button gets pressed again we need to stop the declutch controller and open the clutch
 		}
 
 		// TODO: do the array running thing also for the launch sequence.
@@ -187,7 +200,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// we take the maximum target generated from the Antistall/Protection strategy, the one request
 		// from the driver and the shifter requests when enabled from the respective strategy
-		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
+		MyOutputs->xClutchTarget = MAX(MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift)), MyOutputs->xClutchTargetMax);
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -195,6 +208,20 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// Toggle 1
 		if(TOGGLE_SWITCH01_BUTTON && tToggleSwitch01 < tControllerTimmer) {
+			if(!MyOutputs->NToggleSwitch01State) {
+				MyOutputs->NToggleSwitch01State = 1;
+
+				// Actions for toggle ON
+				// remember the multifunction override
+			}
+			else {
+				MyOutputs->NToggleSwitch01State = 0;
+
+				// Actions for toggle OFF
+				// remember the multifunction override
+
+			}
+
 			MyOutputs->NToggleSwitch01State ^= 1;
 			tToggleSwitch01 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
 		}
@@ -217,7 +244,6 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 	//		tToggleSwitch04 = tControllerTimmer + TOGGLE_SWITCH_DEBOUNCE;
 	//	}
 
-// TODO: remember that if you want to use a toggle to modify maps from the multifunction, you must set the override to 1 in order to temporarily deactivate the switch from  modifying them
 
 		MyOutputs->BSWLEDA = MyOutputs->NToggleSwitch01State;
 		MyOutputs->BSWLEDB = MyOutputs->NToggleSwitch02State;
@@ -229,8 +255,8 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// inputs
 		MyOutputs->NMultifunctionActiveSwitch = MyInputs->NSwitchA;
-		MyOutputs->BMultifunctionNextPos = MyInputs->BSWButtonD;
-		MyOutputs->BMultifunctionPrevPos = MyInputs->BSWButtonC;
+		MyOutputs->BMultifunctionNextPos = MULTIFUNCTION_NEXT_BUTTON;
+		MyOutputs->BMultifunctionPrevPos = MULTIFUNCTION_PREV_BUTTON;
 
 		if(MyOutputs->NMultifunctionActiveSwitch != NMultifunctionActiveSwitchPrev) {
 			NMultifunctionActiveSwitchPrev = MyOutputs->NMultifunctionActiveSwitch;
@@ -281,6 +307,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 
 		// Here we assign the various multifunction maps to the various indexes
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]) MyOutputs->xClutchTargetMax = xClutchTargetMaxMap[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]];
 		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]) MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1];
 		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]) MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
 		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1]) MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1];
@@ -295,8 +322,8 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 	// DISPLAY
 
 		// inputs
-		MyOutputs->BDisplayPageNext = MyInputs->BSWButtonD;
-		MyOutputs->BDisplayPagePrev = MyInputs->BSWButtonC;
+		MyOutputs->BDisplayPageNext = DISPLAY_NEXT_BUTTON;
+		MyOutputs->BDisplayPagePrev = DISPLAY_PREV_BUTTON;
 
 		if(!ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME) {	// we use the page buttons function only if we have the multifunction timing feature enabled
 
@@ -371,7 +398,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		MyOutputs->NControllerStatusWord |= MyOutputs->BSparkCut						<<3;
 		MyOutputs->NControllerStatusWord |= MyOutputs->BLaunchControl					<<4;
 		MyOutputs->NControllerStatusWord |= (MyOutputs->NAntistallState == 2 ? 1 : 0)	<<5;
-		MyOutputs->NControllerStatusWord |= MyOutputs->BShiftingInProgress				<<6;
+		MyOutputs->NControllerStatusWord |= MyOutputs->BShiftInProgress					<<6;
 		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch01State				<<7;
 		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch02State				<<8;
 		MyOutputs->NControllerStatusWord |= MyOutputs->NToggleSwitch03State				<<9;
@@ -445,7 +472,7 @@ void PRE_UPSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_UPSHIFT_STATE;
 
-	MyOutputs->BShiftingInProgress = 1;
+	MyOutputs->BShiftInProgress = 1;
 
 	tPreShiftTimer = HAL_GetTick();
 }
@@ -459,11 +486,11 @@ void PRE_UPSHIFT_Event(void) {
 		MyOutputs->NGearTarget = MyInputs->NGear + 1;											// we go to the next gear
 
 		if((MyOutputs->NUpShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_UPSHIFT) || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
-			MyOutputs->xClutchTargetShift = xClutchTargetUpShiftMap[MyInputs->NGear];
+			MyOutputs->xClutchTargetShiftShadow = xClutchTargetUpShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextUpShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShift = 0;
+			MyOutputs->xClutchTargetShiftShadow = 0;
 		}
 
 		if(MyOutputs->NUpShiftType == SparkCut && ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
@@ -511,7 +538,7 @@ void PRE_DNSHIFT_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = PRE_DNSHIFT_STATE;
 
-	MyOutputs->BShiftingInProgress = 1;
+	MyOutputs->BShiftInProgress = 1;
 
 	tPreShiftTimer = HAL_GetTick();
 }
@@ -525,11 +552,11 @@ void PRE_DNSHIFT_Event(void) {
 		MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
 
 		if((MyOutputs->NDnShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_DNSHIFT) || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
-			MyOutputs->xClutchTargetShift = xClutchTargetDnShiftMap[MyInputs->NGear];
+			MyOutputs->xClutchTargetShiftShadow = xClutchTargetDnShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextDnShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShift = 0;
+			MyOutputs->xClutchTargetShiftShadow = 0;
 		}
 
 		if(MyOutputs->NDnShiftType == SparkCut && ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
@@ -574,64 +601,93 @@ void SHIFTING_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = SHIFTING_STATE;
 
+	tShiftTimer = HAL_GetTick();
+
+	MyOutputs->xClutchTargetShift = MyOutputs->xClutchTargetShiftShadow;
+
 	if(NPreviousState == PRE_UPSHIFT_STATE) {
-		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
 		NShiftRequest = Up;
+		tShifterMaxTransitTime = tUpShift[MyInputs->NGear];
+
+		if(MyOutputs->NUpShiftType == WithClutch) tShifterDelayForClutch = tUpShiftDelayForClutch[MyInputs->NGear];
+		else tShifterDelayForClutch = 0;
 
 		if(MyOutputs->NGearTarget == 1) {		// if going from neutral to 1st we need to actually downshift (it is how the gears work)
-			MyOutputs->BDnShiftPortState = 1;
+			MyOutputs->BDnShiftPortStateShadow = 1;
 		}
 		else {									// all other upshifts are normal
-			MyOutputs->BUpShiftPortState = 1;
+			MyOutputs->BUpShiftPortStateShadow = 1;
 		}
 
 	}
 	else if(NPreviousState == PRE_DNSHIFT_STATE) {
-		tShifterMaxTransitTime = tDnShift[MyInputs->NGear - 1];
 		NShiftRequest = Down;
+		tShifterMaxTransitTime = tDnShift[MyInputs->NGear];
+
+		if(MyOutputs->NDnShiftType == WithClutch) tShifterDelayForClutch = tDnShiftDelayForClutch[MyInputs->NGear];
+		else tShifterDelayForClutch = 0;
 
 		if(MyOutputs->NGearTarget == 0) {		// if going from 1st to neutral we need to actually upshift (it is how the gears work)
-			MyOutputs->BUpShiftPortState = 1;
+			MyOutputs->BUpShiftPortStateShadow = 1;
 		}
 		else {									// all other downshifts are normal
-			MyOutputs->BDnShiftPortState = 1;
+			MyOutputs->BDnShiftPortStateShadow = 1;
 		}
 
 	}
 	else {
 		NCurrentState = Unknown;
 		RaiseControlError(SHIFT_TARGET_UNKNOWN);
+		tShifterDelayForClutch = 0;
 	}
 
-	tShiftTimer = HAL_GetTick();
 }
 void SHIFTING_Exit(void) {
-
+	MyOutputs->BNGearMatch = 0;
 }
 void SHIFTING_Event(void) {
 
+	// we check for control errors and if present we abort
+	if(MyOutputs->NControlErrorStatus) {
+		SHIFTING_Exit();
+		ERROR_Entry();
+		return;
+	}
 
-	// TODO: keep checking for control errors ??
-
-
-	if((tShiftTimer + tShifterMaxTransitTime) < tControllerTimmer) {	// the max time for the gear has expired
+	if((tShiftTimer + tShifterMaxTransitTime) <= tControllerTimmer) {	// the max time for the gear has expired
 		// go out and determine if the shift was completed or not
 		SHIFTING_Exit();
 		POSTSHIFT_Entry();
 		return;
 	}
 
+	// if the shift gets completed before the maximum time we terminate it
+	if(MyInputs->NGear == MyOutputs->NGearTarget && ALLOW_END_OF_SHIFT_ON_GEAR_MATCH) {
+		if(!MyOutputs->BNGearMatch) {
+			MyOutputs->BNGearMatch = 1;
+			tShifterGearMatch = tShiftTimer;
+		}
+
+		if((tShifterGearMatch + GEAR_MATCH_EARLY_THRESHOLD_TIME) <= tShiftTimer) {
+			SHIFTING_Exit();
+			POSTSHIFT_Entry();
+			return;
+		}
+	}
+	else {
+		MyOutputs->BNGearMatch = 0;
+	}
+
+	// TODO: implement the shifting timing (include pre and post shift phases and create the metrics
+
+	// TODO: think about the double action shift (pushing and then pulling the piston back)
 }
 void SHIFTING_Run(void) {
 
-	// based on the error status and the strat preferences decide in which controller to enter
-
-
-
-	// PID
-
-
-	// FEED FORWARD
+	if((tShiftTimer + tShifterDelayForClutch) <= tControllerTimmer) {	// when the actuator delay has passed
+		MyOutputs->BUpShiftPortState = MyOutputs->BUpShiftPortStateShadow;
+		MyOutputs->BDnShiftPortState = MyOutputs->BDnShiftPortStateShadow;
+	}
 
 }
 
@@ -643,14 +699,17 @@ void POSTSHIFT_Entry(void) {
 	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
+	MyOutputs->BUpShiftPortStateShadow = 0;
+	MyOutputs->BDnShiftPortStateShadow = 0;
 
 	// reset all control variables for the next actuation
+	MyOutputs->xClutchTargetShiftShadow = 0;
 	MyOutputs->xClutchTargetShift = 0;
 	MyOutputs->BSparkCut = 0;
 
 }
 void POSTSHIFT_Exit(void) {
-	MyOutputs->BShiftingInProgress = 0;
+	MyOutputs->BShiftInProgress = 0;
 
 	// we rest the False Neutral flag TODO: not sure if correct here
 	MyInputs->BFalseNeutral = 0;
@@ -687,7 +746,7 @@ void ERROR_Entry(void) {
 	NPreviousState = NCurrentState;
 	NCurrentState = ERROR_STATE;
 
-	MyOutputs->BShiftingInProgress = 0;
+	MyOutputs->BShiftInProgress = 0;
 	// TODO: we need to open a led to indicate the Error State !!!
 	// or send it to the display via CAN
 
@@ -696,6 +755,7 @@ void ERROR_Entry(void) {
 	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
+	MyOutputs->xClutchTargetShiftShadow = 0;
 	MyOutputs->xClutchTargetShift = 0;
 	MyOutputs->BSparkCut = 0;
 

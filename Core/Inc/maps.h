@@ -13,7 +13,7 @@
 #define TOTAL_GEARS 6
 #define MAX_GEAR 5
 
-#define CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE	11		// the number of points for the rClutchPaddle - xClutchTargetManual map
+#define CLUTCH_PADDLE_TARGET_MAP_SIZE		11		// the number of points for the rClutchPaddle - xClutchTargetManual map
 
 #define CLUTCH_PADDLE_MAP_SIZE				2
 #define SWITCHA_MAP_SIZE					14
@@ -26,6 +26,7 @@
 #define CLUTCH_PADDLE_MAP_OFFSETS 			13
 #define CLUTCH_RELEASE_MAPS 				14
 #define CLUTCH_RELEASE_MAP_POINTS			20
+#define CLUTCH_TARGET_MAX_POINTS			14
 
 #define CLUTCH_TARGET_MIN_DEF				0		// the default min clutch target
 #define CLUTCH_TARGET_MAX_DEF				5		// the default max clutch target
@@ -57,12 +58,12 @@ static const float NGearRawLimsMaxMap[TOTAL_GEARS] =
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // rClutchPaddle
 
-static const float rClutchPaddle_xClutchTargetMaps[CLUTCH_PADDLE_MAPS][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = { // the various clutch maps
+static const float rClutchPaddle_xClutchTargetMaps[CLUTCH_PADDLE_MAPS][CLUTCH_PADDLE_TARGET_MAP_SIZE] = { // the various clutch maps
 
-		/* 1:	Linear			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		/* 2:	Progressive 1	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		/* 3:	Progressive 2	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		/* 4:	Progressive 3	*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* 1:	Linear			*/		{0.00, 0.50, 1.00, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, 4.50, 5.00},
+		/* 2:	Progressive 1	*/		{0.00, 1.00, 2.00, 3.00, 4.00, 4.17, 4.33, 4.50, 4.67, 4.83, 5.00},
+		/* 3:	Progressive 2	*/		{0.00, 1.33, 2.67, 4.00, 4.14, 4.29, 4.43, 4.57, 4.71, 4.86, 5.00},
+		/* 4:	Progressive 3	*/		{0.00, 2.00, 4.00, 4.13, 4.25, 4.38, 4.50, 4.63, 4.75, 4.88, 5.00},
 		/* 5:	DeadBand 1		*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* 6:	Hill 1			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* 7:	Hill 2			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -98,21 +99,10 @@ static const float NSWitchAmap[2][SWITCHA_MAP_SIZE] = {
 };
 
 
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Clutch - SERVO
+// Shifting Times
 
-
-static const float xClutchTarget_rServoDemand[2][CLUTCH_SERVO_MAP_SIZE] = {
-
-		/* In:  xClutchTarget	*/	{ 	CLUTCH_TARGET_MIN_DEF  , 	CLUTCH_TARGET_MAX_DEF  },
-		/* Out: rServoDemand	*/	{ CLUTCH_SERVO_ABSOLUTE_MAX, CLUTCH_SERVO_ABSOLUTE_MIN }
-};
-
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-// tShift
-
-static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear valve activation time (ms)
+static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st total shifting time (ms)
 																100,	// 1st to 2nd
 																100,	// 2nd to 3rd
 																100,	// 3rd to 4th
@@ -121,12 +111,28 @@ static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st gear 
 };
 
 
-static const uint32_t tDnShift[TOTAL_GEARS] = {					0,		// gear valve activation time (ms)
+static const uint32_t tDnShift[TOTAL_GEARS] = {					0,		// total shifting time (ms)
 																10,		// 1st to neutral
 																200,	// 2nd to 1st
 																200,	// 3rd to 2nd
 																200,	// 4th to 3rd
 																200		// 5th to 4th
+};
+
+static const uint32_t tUpShiftDelayForClutch[TOTAL_GEARS] = {	80,		// delay before actuating the valves (ms)
+																80,		// 1st to neutral
+																80,		// 2nd to 1st
+																80,		// 3rd to 2nd
+																80,		// 4th to 3rd
+																0		// 5th to 4th
+};
+
+static const uint32_t tDnShiftDelayForClutch[TOTAL_GEARS] = {	0,		// delay before actuating the valves (ms)
+																80,		// 1st to neutral
+																80,		// 2nd to 1st
+																80,		// 3rd to 2nd
+																80,		// 4th to 3rd
+																80		// 5th to 4th
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -160,20 +166,31 @@ static const uint16_t nEngineDnShiftMap[TOTAL_GEARS] = {		0,		// gear max rpm th
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // xClutch
 
-static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS] = { 		10000,	// neutral to 1st clutch target during upshift
-																	10000,	// 1st to 2nd
-																	10000,	// 2nd to 3rd
-																	10000,	// 3rd to 4th
-																	10000,	// 4th to 5th
-																	0
+static const float xClutchTargetUpShiftMap[TOTAL_GEARS] = { 		3.00,	// neutral to 1st clutch target during upshift
+																	3.00,	// 1st to 2nd
+																	3.00,	// 2nd to 3rd
+																	3.00,	// 3rd to 4th
+																	3.00,	// 4th to 5th
+																	0.00
 };
 
-static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS] = {		0,		// clutch target during downshift
-																	10000,	// 1st to neutral
-																	10000,	// 2nd to 1st
-																	10000,	// 3rd to 2nd
-																	10000,	// 4th to 3rd
-																	10000	// 5th to 4th
+static const float xClutchTargetDnShiftMap[TOTAL_GEARS] = {			0.00,		// clutch target during downshift
+																	4.00,	// 1st to neutral
+																	4.00,	// 2nd to 1st
+																	4.00,	// 3rd to 2nd
+																	4.00,	// 4th to 3rd
+																	4.00	// 5th to 4th
+};
+
+static const float xClutchTargetMaxMap[CLUTCH_TARGET_MAX_POINTS] =
+
+		/* 		xClutchTargetMax */	{5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3};
+
+
+static const float xClutchTarget_rServoDemandMap[2][CLUTCH_SERVO_MAP_SIZE] = {
+
+		/* In:  xClutchTarget	*/	{ 	CLUTCH_TARGET_MIN_DEF  , 	CLUTCH_TARGET_MAX_DEF  },
+		/* Out: rServoDemand	*/	{ CLUTCH_SERVO_ABSOLUTE_MAX, CLUTCH_SERVO_ABSOLUTE_MIN }
 };
 
 
@@ -195,6 +212,7 @@ static const uint16_t xClutchReleaseMap[CLUTCH_RELEASE_MAPS][CLUTCH_RELEASE_MAP_
 		/* 13:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* 14:	Empty			*/		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
+
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 

@@ -52,7 +52,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	// CLUTCH
 
 	// we convert from mm to timer prescaler
-	My2DMapInterpolate(CLUTCH_SERVO_MAP_SIZE, xClutchTarget_rServoDemand, outputs->xClutchTarget, &outputs->rServoDemandRaw, CLUTCH_TARGET_MIN_MARGIN, CLUTCH_TARGET_MAX_MARGIN);
+	My2DMapInterpolate(CLUTCH_SERVO_MAP_SIZE, xClutchTarget_rServoDemandMap, outputs->xClutchTarget, &outputs->rServoDemandRaw, CLUTCH_TARGET_MIN_MARGIN, CLUTCH_TARGET_MAX_MARGIN);
 
 	// convert from float to uint16_t
 	outputs->rServoDemand  =(uint16_t)round(outputs->rServoDemandRaw);

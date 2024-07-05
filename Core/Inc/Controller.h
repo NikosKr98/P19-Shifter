@@ -15,6 +15,7 @@
 #define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
 #define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
 #define ALLOW_GEARS_WITH_CAR_STOPPED		1		// we allow changing gear with the car stopped and the clutch paddle pressed
+#define ALLOW_END_OF_SHIFT_ON_GEAR_MATCH	0		// we allow to end a gear change before the defined shift time if we see that the gear is matching with the target for some time
 
 // SHIFT STRATEGIES
 #define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// allow spark cut during upshifts strategie, enabled by multifunction
@@ -36,6 +37,7 @@
 #define PRE_UPSHIFT_THRESHOLD_TIME			100		// the time we keep trying to accept an upshift request before we deny it
 #define PRE_DNSHIFT_THRESHOLD_TIME			300		// the time we keep trying to accept an downshift request before we deny it
 #define POSTSHIFT_THRESHOLD_TIME			500		// the time we allow for all the conditions to return to nominal post shifting
+#define GEAR_MATCH_EARLY_THRESHOLD_TIME		50		// the time we wait for the gears to remain matched to declare that they are actually the same
 
 // CLUTCH PADDLE
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
@@ -48,11 +50,14 @@
 //#define CLUTCH_TARGET_MIN_DEF				0		// the default min clutch target
 //#define CLUTCH_TARGET_MAX_DEF				5		// the default max clutch target
 #define CLUTCH_TARGET_MIN_MARGIN			0		// the margin that we accept for the servo demand map, below the map's min value
-#define CLUTCH_TARGET_MAX_MARGIN			1		// the margin that we accept for the servo demand map, abovbe the map's maximum value
+#define CLUTCH_TARGET_MAX_MARGIN			1.5		// the margin that we accept for the servo demand map, abovbe the map's maximum value
 
 // MULTIFUNCTION
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
 #define MULTIFUNCTION_ACTIVE_TIME			2000	// the time the display shows the map position and value and the buttons work as +/-
+
+#define MULTIFUNCTION_NEXT_BUTTON			inputs->BSWButtonD
+#define MULTIFUNCTION_PREV_BUTTON			inputs->BSWButtonC
 
 // Max position										//		ATTENTION	!! (do not exceed the array size, currently 14)
 #define MULTIFUNCTION01_MAX_POS				14		// the maximum position (size) of each map (select value = 0 to deactivate the map)
@@ -103,6 +108,7 @@
 #define MULTIFUNCTION14_WRAP				1
 
 // Multifunction associations
+#define MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX		1
 #define MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX		2
 #define MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX	3
 #define MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX	4
@@ -120,6 +126,9 @@
 // DISPLAY
 #define DISPLAY_MAX_PAGE					5		// the maximum page number we have in the screen, not the index
 #define DISPLAY_PAGE_BUTTON_DEBOUNCE		200		// debounce time for consecutive page changes
+#define DISPLAY_NEXT_BUTTON					inputs->BSWButtonD
+#define DISPLAY_PREV_BUTTON					inputs->BSWButtonC
+
 #define CONTROLLER_STATUS_SHADOW_REFRESH	1000	// the time we accumulate all controller errors before zeroing them (for display reasons)
 
 #define DISPLAY_MULTIFUNCTION_PAGE			6		// the pop up multifunction page
@@ -182,11 +191,13 @@ typedef struct {
 
 	// GEAR
 	uint8_t NGearTarget;					// target gear for the controller
+	uint8_t BNGearMatch;					// used for shifting control, indicates that NGear matched the target gear
 
 	// CLUTCH
 	float xClutchTargetProtection;			// the clutch target opening requested from the protection/antistall strategy
 	float xClutchTargetManual;				// the clutch target opening requested from the clutch pad
 	float xClutchTargetShift;				// the clutch target opening requested from the shift control
+	float xClutchTargetShiftShadow;			// the shadow variable used in order to save the target and applied at the right moment
 	float xClutchTarget;					// the clutch target opening used for the servo control
 	float xClutchBitepoint;					// the clutch bite point
 	float xClutchTargetMin;					// the min opening point (can be changed from multifunction and strategies)
@@ -199,12 +210,14 @@ typedef struct {
 
 	// SHIFTER
 	uint8_t BUpShiftPortState;				// 1 when the UpShift port is being actuated
+	uint8_t BUpShiftPortStateShadow;		// the shadow variable in order to control the timing
 	uint8_t BDnShiftPortState;				// 1 when the DownShift port is being actuated
+	uint8_t BDnShiftPortStateShadow;		// the shadow variable in order to control the timing
 	uint32_t tLastUpShiftTransitTime_us;	// the time it actually took to shift the gear Up in the last actuation (for performance measurement)
 	uint32_t tLastDnShiftTransitTime_us;	// the time it actually took to shift the gear Dn in the last actuation (for performance measurement)
 	uint16_t NTotalShifts;					// total number of shifts done since power up
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
-	uint8_t BShiftingInProgress;			// 1 when the state machine is performing a shift
+	uint8_t BShiftInProgress;				// 1 when the state machine is performing a shift
 	uint8_t NUpShiftType;					// UpShift type index selected from the multifunction
 	uint8_t NDnShiftType;					// DpShift type index selected from the multifunction
 

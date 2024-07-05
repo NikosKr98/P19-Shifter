@@ -131,17 +131,18 @@ int main(void)
   HAL_Delay(50);	// we give some time to the peripherals to start and produce normal values
 
   /* USER CODE END 2 */
-
+  uint32_t tMain, tExecution;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
 
 	  if(BCycleTimerFlag) {		// BCycleTimerFlag becomes 1 in the Timer callback below
 		  BCycleTimerFlag = 0;
-
+		  tMain = HAL_GetTick();
 		  ReadInputs(&Inputs);
 		  Controller(&Inputs,&Outputs);
 		  WriteOutputs(&Inputs,&Outputs);
+		  tExecution = HAL_GetTick() - tMain;
 	  }
 
     /* USER CODE END WHILE */
