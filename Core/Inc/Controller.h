@@ -18,13 +18,13 @@
 #define ALLOW_NEUTRAL_WHEN_PADDLE_IN_ERROR	1		// allow downshift from 1st to neutral when all Clutch paddle inputs are in error
 #define ALLOW_NEUTRAL_WITHOUT_CLUTCH		0		// downshift from 1st to neutral without pulling the clutch paddle
 #define ALLOW_FIRST_WITHOUT_CLUTCH			0		// upshift from neutral to 1st without pulling the clutch paddle
-#define CLUTCH_ACTUATION_DURING_UPSHIFT		0		// clutch actuation during upshift
+#define CLUTCH_ACTUATION_DURING_UPSHIFT		1		// clutch actuation during upshift
 #define CLUTCH_ACTUATION_DURING_DNSHIFT		1		// clutch actuation during dnshift
 
 #define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
 
 // ANTISTALL
-#define ANTISTALL_ENABLED					1		// antistall enable strategy
+#define ANTISTALL_ENABLED					0		// antistall enable strategy
 #define ANTISTALL_TRIGGER_TIME				1000	// time for antistall to be triggered
 #define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
@@ -38,12 +38,12 @@
 #define CLUTCH_PADDLE_THRESHOLD_FOR_FIRST	90		// Threshold % of clutch paddle for upshift from neutral to first
 
 // CLUTCH
-#define xCLUTCH_BITE_POINT					1700	// the clutch bite point
-#define xCLUTCH_REST_POSITION				1500	// the clutch position when not actuated
-#define xCLUTCH_FULLY_ENGAGED				1900	// the fully engaged position of the clutch
-#define xCLUTCH_DNSHIFT_TARGET				1700	// the clutch target opening during downshifts
-#define xCLUTCH_ABSOLUTE_MIN				900		// min clutch position value
-#define xCLUTCH_ABSOLUTE_MAX				2100	// max clutch position value
+#define xCLUTCH_BITE_POINT					1580	// the clutch bite point
+#define xCLUTCH_REST_POSITION				1720	// the clutch position when not actuated
+#define xCLUTCH_FULLY_ENGAGED				1400	// the fully engaged position of the clutch
+#define xCLUTCH_DNSHIFT_TARGET				1400	// the clutch target opening during downshifts
+#define xCLUTCH_ABSOLUTE_MIN				1700	// min clutch position value
+#define xCLUTCH_ABSOLUTE_MAX				1380	// max clutch position value
 
 
 

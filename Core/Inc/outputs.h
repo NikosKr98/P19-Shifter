@@ -16,9 +16,11 @@ extern TIM_HandleTypeDef htim2;
 extern CAN_HandleTypeDef hcan;
 
 
-#define DISPLAY_TX_ID 0x320
+#define DISPLAY_TX_ID 		0x320
+#define ECU_TX_ID 			0x610
+#define CAN_TX_TIMEOUT 		200		// us of CAN timeout when sending a frame
 
-#define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
+#define ECU_SWITCH_TX_ID 	0x666
 
 // DIGITAL OUT
 	// DO01: CLUTCH PWM

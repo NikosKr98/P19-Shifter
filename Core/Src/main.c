@@ -123,7 +123,6 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim3);	// Code Cycle timer with interrupt (100Hz)
   HAL_TIM_Base_Start(&htim2);		// general 1MHz timer for timing
-
   InitInputs();
   InitController(&Inputs,&Outputs);
   InitOutputs();

@@ -25,7 +25,7 @@ extern TIM_HandleTypeDef htim1;
 // MACRO DEFINITIONS
 #define BIT(var_,pos_)     ((var_ >> pos_) & 0x1)
 #define LOGNOT(bit_)       ((bit_ ^ 0x1) & 0x1)
-#define MIN(a,b)           (a < b ? a : b)
+#define MIN(a, b) 			((a) < (b) ? (a) : (b))
 #define MAX(a,b)           (a > b ? a : b)
 #define CLAMP(x,l,h)       (MIN(MAX(x,l),h))
 #define ABS(a)             (a > 0 ? a : (-a))

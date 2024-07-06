@@ -28,11 +28,19 @@ static const float NGearMap[2][TOTAL_GEARS] = {
 
 };
 
+//static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = {
+//
+//	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100},
+//	/* Out: xClutchTarget */		{900, 1100, 1300, 1500, 1700, 1750, 1800, 1850, 1900, 1950, 2100}
+//};
+
 static const float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_MAX_SIZE] = {
 
 	/* In:  rClutchPaddle */		{  0,   10,   20,   30,   40,   50,   60,   70,   80,   90,  100},
-	/* Out: xClutchTarget */		{900, 1100, 1300, 1500, 1700, 1750, 1800, 1850, 1900, 1950, 2100}
+	/* Out: xClutchTarget */		{1720, 1688, 1656, 1624, 1592, 1560, 1528, 1496, 1464, 1432, 1400}
 };
+
+//BITE Point : 1580
 
 static const float rClutchMap[2][CLUTCH_PADDLE_MAP_SIZE] = {
 
@@ -63,35 +71,36 @@ static const uint16_t nEngineDnShiftMap[TOTAL_GEARS-1] = {		10000,	// 1st to neu
 };
 
 
-static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS-1] = { 	10000,	// neutral to 1st xClutchTarget
-																	10000,	// 1st to 2nd
-																	10000,	// 2nd to 3rd
-																	10000,	// 3rd to 4th
-																	10000,	// 4th to 5th
+static const uint32_t xClutchTargetUpShiftMap[TOTAL_GEARS-1] = { 	1400,	// neutral to 1st xClutchTarget
+																	1400,	// 1st to 2nd
+																	1400,	// 2nd to 3rd
+																	1400,	// 3rd to 4th
+																	1400,	// 4th to 5th
 };
 
-static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS-1] = {	10000,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
-																	10000,	// 2nd to 1st
-																	10000,	// 3rd to 2nd
-																	10000,	// 4th to 3rd
-																	10000,	// 5th to 4th
+static const uint16_t xClutchTargetDnShiftMap[TOTAL_GEARS-1] = {	1400,		// 1st to neutral xClutchTarget (it is not needed here because we are pulling the clutch paddle)
+																	1400,	// 2nd to 1st
+																	1400,	// 3rd to 2nd
+																	1400,	// 4th to 3rd
+																	1400,	// 5th to 4th
 };
 
 
 
 static const uint32_t tUpShift[TOTAL_GEARS-1] = { 				100,	// neutral to 1st gear valve activation time (ms)
-																200,	// 1st to 2nd
-																200,	// 2nd to 3rd
-																200,	// 3rd to 4th
-																200,	// 4th to 5th
+																300,	// 1st to 2nd
+																300,	// 2nd to 3rd
+																300,	// 3rd to 4th
+																300,	// 4th to 5th
 };
 
 
-static const uint32_t tDnShift[TOTAL_GEARS-1] = {				10,	// 1st to neutral gear valve activation time (ms)
-																200,	// 2nd to 1st
-																200,	// 3rd to 2nd
-																200,	// 4th to 3rd
-																200,	// 5th to 4th
+static const uint32_t tDnShift[TOTAL_GEARS-1] = {				5,	// 1st to neutral gear valve activation time (ms)
+																300,	// 2nd to 1st
+																300,	// 3rd to 2nd
+																300,	// 4th to 3rd
+																300,	// 5th to 4th
 };
+
 
 #endif /* INC_MAPS_H_ */

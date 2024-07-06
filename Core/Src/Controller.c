@@ -35,7 +35,8 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	MyOutputs = outputs;
 
 	MyOutputs->xClutchBitepoint = xCLUTCH_BITE_POINT;
-
+	MyOutputs->xClutchTarget = xCLUTCH_REST_POSITION;
+	MyOutputs->xClutchTargetShift = xCLUTCH_REST_POSITION;
 	IDLE_Entry();
 }
 
@@ -62,24 +63,24 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 					// Activation
 					if(MyOutputs->NAntistallState == Init && (tAntistallTimmer + ANTISTALL_TRIGGER_TIME) < tControllerTimmer) {
 						MyOutputs->NAntistallState = Active;
-						MyOutputs->xClutchTargetProtection = xCLUTCH_ABSOLUTE_MAX;
+						MyOutputs->xClutchTargetProtection = xCLUTCH_FULLY_ENGAGED;
 					}
 				}
 				// Not activation due to engine rpm returning over the limit, or early clutch paddle press
 				if(MyOutputs->NAntistallState == Init && (MyInputs->nEngine > nEngineAntistallMap[MyInputs->NGear] || MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED)) {
 					MyOutputs->NAntistallState = Off;
-					MyOutputs->xClutchTargetProtection = 0;
+					MyOutputs->xClutchTargetProtection = xCLUTCH_REST_POSITION;
 				}
 				// De-activation by Clutch paddle press
 				if(MyOutputs->NAntistallState == Active && MyInputs->rClutchPaddle > ANTISTALL_CLUTCHPADDLE_PRESSED) {
 					MyOutputs->NAntistallState = Off;
-					MyOutputs->xClutchTargetProtection = 0;
+					MyOutputs->xClutchTargetProtection = xCLUTCH_REST_POSITION;
 				}
 			}
 			// De-activation by Driver Kill or Neutral or Errors
 			else {
 				MyOutputs->NAntistallState = Off;
-				MyOutputs->xClutchTargetProtection = 0;
+				MyOutputs->xClutchTargetProtection = xCLUTCH_REST_POSITION;
 			}
 		#endif
 
@@ -105,7 +106,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// we take the maximum target generated from the Antistall/Protection strategy, the request
 		// from the driver and the shifter requests when enabled from the respective strategy
-		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
+		MyOutputs->xClutchTarget = MIN((uint16_t)MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift);
 
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -117,6 +118,10 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+	//CAN BUS ~ QUICK MESSAGE PARSING
+	outputs->BLaunchControl	= inputs->BLaunchRequest;
 
 	// SHIFTER STATE MACHINE
 
@@ -188,7 +193,6 @@ void IDLE_Event(void) {
 
 }
 void IDLE_Run(void) {
-
 }
 
 
@@ -219,7 +223,7 @@ void PRE_UPSHIFT_Event(void) {
 			MyOutputs->BOverrideActuateClutchOnUpShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShift = 0;
+			MyOutputs->xClutchTargetShift = xCLUTCH_REST_POSITION;
 		}
 
 		if(ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
@@ -284,7 +288,7 @@ void PRE_DNSHIFT_Event(void) {
 			MyOutputs->BOverrideActuateClutchOnDnShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShift = 0;
+			MyOutputs->xClutchTargetShift = xCLUTCH_REST_POSITION;
 		}
 
 		if(ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
@@ -401,7 +405,7 @@ void POSTSHIFT_Entry(void) {
 	MyOutputs->BDnShiftPortState = 0;
 
 	// reset all control variables for the next actuation
-	MyOutputs->xClutchTargetShift = 0;
+	MyOutputs->xClutchTargetShift = xCLUTCH_REST_POSITION;
 	MyOutputs->BSparkCut = 0;
 
 }
@@ -456,7 +460,7 @@ void ERROR_Entry(void) {
 	MyOutputs->BDnShiftPortState = 0;
 
 	// reset all control variables for the next actuation
-	//MyOutputs->xClutchTarget = xCLUTCH_FULLY_ENGAGED;
+	MyOutputs->xClutchTarget = xCLUTCH_REST_POSITION;
 	// clutch should always work... if we enter here during an actuation, not sure if it is correct to interrupt it
 	MyOutputs->BSparkCut = 0;
 

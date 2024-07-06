@@ -51,7 +51,7 @@
 
 // CAN
 #define SIU_RX_ID 								0x310
-#define ECU_RX_ID 								0x311
+#define ECU_RX_ID 								0x600
 
 #define STEERING_WHEEL_FITTED_INTERVAL			500		// after this time that we have not seen the message from SW we declare it not fitted/dead
 #define ECU_COMMS_LOST_INTERVAL					500		// after this time that we have not seen the message from the ECU we declare it not fitted/dead

@@ -8,6 +8,10 @@
 #include <Outputs.h>
 
 // CAN
+
+uint8_t CANTxBuffer[8] = {0};
+
+
 uint32_t nCanTxErrorCount=0;
 uint32_t nCanOldestMailbox=4, nCanSecondOldestMailbox=2, nCanYoungestMailbox=1;
 
@@ -24,7 +28,6 @@ uint16_t xClutchTargetOut;
 #define TIMER_MAX_PRESCALER 1000
 uint32_t nTimerPrescaler;
 
-uint8_t TxData[8];
 
 // private function declarations
 void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data);
@@ -67,15 +70,31 @@ void WriteOutputs(OutputStruct *output) {
 
 	// Shifting Ports
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
-	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BUpShiftPortState);
-	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, output->BUpShiftPortState);
+	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, output->BDnShiftPortState);
 
 
 	// Toggle Switches
 	// output->BSWLEDA
 
+	uint8_t BLaunchButtonCANSW = output->BLaunchControl;
+	uint8_t BSparkCutCANSW = output->BSparkCut;
 
+
+	CANTxBuffer[6] = 0;
+	CANTxBuffer[6] |= (BLaunchButtonCANSW				& 0x01) << 0;
+	CANTxBuffer[6] |= (BSparkCutCANSW 					& 0x01) << 1;
+	CANTxBuffer[6] |= (0							  	& 0x01) << 2;
+	CANTxBuffer[6] |= (0								& 0x01) << 3;
+	CANTxBuffer[6] |= (0							    & 0x01) << 4;
+	CANTxBuffer[6] |= (0								& 0x01) << 5;
+	CANTxBuffer[6] |= (0								& 0x01) << 6;
+	CANTxBuffer[6] |= (0								& 0x01) << 7;
+
+
+	CAN_TX(ECU_SWITCH_TX_ID, 8 , CANTxBuffer);
 	// CAN
+	//	CAN_TX(ECU_SWITCH_TX_ID, 8 , CANTxBuffer);
 	// add the info of the shutDown (DriverKill) in the CAN for others to see
 	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF
 }
