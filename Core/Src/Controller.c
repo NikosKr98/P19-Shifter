@@ -119,7 +119,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		#ifdef ANTISTALL_ENABLED
 
 			// if the shut down is activated and we are at gear greater than neutral we can enter
-			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftInProgress && !MyInputs->BFalseNeutral) {
+			if(!MyInputs->BDriverKill && MyInputs->NGear >= ANTISTALL_MIN_ACTIVATION_GEAR && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftInProgress && !MyInputs->BFalseNeutral) {
 
 				if(MyOutputs->NAntistallState != Active && MyInputs->nEngine <= nEngineAntistallMap[MyInputs->NGear] && MyInputs->rClutchPaddle < ANTISTALL_CLUTCHPADDLE_RELEASED) {
 					// Timer initialization of enable strategy

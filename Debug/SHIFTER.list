@@ -27,23 +27,23 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  000200d4  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0001aca5  00000000  00000000  000200fd  2**0
+ 12 .debug_info   0001ac99  00000000  00000000  000200fd  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 0000314d  00000000  00000000  0003ada2  2**0
+ 13 .debug_abbrev 0000314d  00000000  00000000  0003ad96  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 000010c8  00000000  00000000  0003def0  2**3
+ 14 .debug_aranges 000010c8  00000000  00000000  0003dee8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_ranges 00000fa0  00000000  00000000  0003efb8  2**3
+ 15 .debug_ranges 00000fa0  00000000  00000000  0003efb0  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0001ad56  00000000  00000000  0003ff58  2**0
+ 16 .debug_macro  0001ad59  00000000  00000000  0003ff50  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   000151a0  00000000  00000000  0005acae  2**0
+ 17 .debug_line   000151a2  00000000  00000000  0005aca9  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    00095e26  00000000  00000000  0006fe4e  2**0
+ 18 .debug_str    00095e46  00000000  00000000  0006fe4b  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  00105c74  2**0
+ 19 .comment      00000053  00000000  00000000  00105c91  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00004b90  00000000  00000000  00105cc8  2**2
+ 20 .debug_frame  00004b90  00000000  00000000  00105ce4  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1252,7 +1252,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		#ifdef ANTISTALL_ENABLED
 
 			// if the shut down is activated and we are at gear greater than neutral we can enter
-			if(!MyInputs->BDriverKill && MyInputs->NGear > 0 && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftInProgress && !MyInputs->BFalseNeutral) {
+			if(!MyInputs->BDriverKill && MyInputs->NGear >= ANTISTALL_MIN_ACTIVATION_GEAR && !MyInputs->BNGearInError && !MyInputs->BnEngineInError && !MyOutputs->BShiftInProgress && !MyInputs->BFalseNeutral) {
  8000d1c:	4b87      	ldr	r3, [pc, #540]	; (8000f3c <Controller+0x234>)
  8000d1e:	681b      	ldr	r3, [r3, #0]
  8000d20:	f893 307e 	ldrb.w	r3, [r3, #126]	; 0x7e

@@ -22,13 +22,11 @@
 #define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// allow spark cut during dnshifts strategie, enabled by multifunction
 #define ALLOW_CLUTCH_ACT_DURING_UPSHIFT		1		// allow clutch actuation during upshift strategy, enabled by multifunction
 #define ALLOW_CLUTCH_ACT_DURING_DNSHIFT		1		// allow clutch actuation during dnshift strategy, enabled by multifunction
-
 #define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
-
-#define ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME	0		// allow the use of +/- buttons all the times with no need or the rotary to turn first. This strategy deactivates the screen page function
 
 // ANTISTALL
 #define ANTISTALL_ENABLED					1		// antistall enable strategy
+#define ANTISTALL_MIN_ACTIVATION_GEAR		1		// the gear from which we enable antistall
 #define ANTISTALL_TRIGGER_TIME				1000	// time for antistall to be triggered
 #define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
@@ -45,14 +43,12 @@
 #define CLUTCH_PADDLE_ALLOW_OFFSET_MAX		95		// the threshold below (and equal) which we do not apply
 
 // CLUTCH
-
 #define CLUTCH_BITE_POINT					1700	// the clutch bite point
-//#define CLUTCH_TARGET_MIN_DEF				0		// the default min clutch target
-//#define CLUTCH_TARGET_MAX_DEF				5		// the default max clutch target
 #define CLUTCH_TARGET_MIN_MARGIN			0		// the margin that we accept for the servo demand map, below the map's min value
 #define CLUTCH_TARGET_MAX_MARGIN			1.5		// the margin that we accept for the servo demand map, abovbe the map's maximum value
 
 // MULTIFUNCTION
+#define ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME	0		// allow the use of +/- buttons all the times with no need or the rotary to turn first. This strategy deactivates the screen page function
 #define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
 #define MULTIFUNCTION_ACTIVE_TIME			2000	// the time the display shows the map position and value and the buttons work as +/-
 
