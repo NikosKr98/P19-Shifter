@@ -19,7 +19,7 @@
 
 // SHIFT STRATEGIES
 #define ALLOW_SPARK_CUT_ON_UP_SHIFT 		1		// allow spark cut during upshifts strategie, enabled by multifunction
-#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		0		// allow spark cut during dnshifts strategie, enabled by multifunction
+#define ALLOW_SPARK_CUT_ON_DN_SHIFT 		1		// allow spark cut during dnshifts strategie, enabled by multifunction
 #define ALLOW_CLUTCH_ACT_DURING_UPSHIFT		1		// allow clutch actuation during upshift strategy, enabled by multifunction
 #define ALLOW_CLUTCH_ACT_DURING_DNSHIFT		1		// allow clutch actuation during dnshift strategy, enabled by multifunction
 #define CHECK_POST_SHIFT_GEAR				1		// during the post shift phase we check if the current gear has become equal to the target
@@ -43,13 +43,12 @@
 #define CLUTCH_PADDLE_ALLOW_OFFSET_MAX		95		// the threshold below (and equal) which we do not apply
 
 // CLUTCH
-#define CLUTCH_BITE_POINT					1700	// the clutch bite point
-#define CLUTCH_TARGET_MIN_MARGIN			0		// the margin that we accept for the servo demand map, below the map's min value
-#define CLUTCH_TARGET_MAX_MARGIN			1.5		// the margin that we accept for the servo demand map, abovbe the map's maximum value
+#define CLUTCH_TARGET_MIN_MARGIN			0.0f	// the margin that we accept for the servo demand map, below the map's min value
+#define CLUTCH_TARGET_MAX_MARGIN			15.0f	// the margin that we accept for the servo demand map, abovbe the map's maximum value
 
 // MULTIFUNCTION
 #define ALLOW_MULTIFUNC_WITH_NO_ACTIVE_TIME	0		// allow the use of +/- buttons all the times with no need or the rotary to turn first. This strategy deactivates the screen page function
-#define NMF									14		// the number of multifunction maps (must be the same as the rotary positions)
+#define NMF									12		// the number of multifunction maps (must be the same as the rotary positions)
 #define MULTIFUNCTION_ACTIVE_TIME			2000	// the time the display shows the map position and value and the buttons work as +/-
 
 #define MULTIFUNCTION_NEXT_BUTTON			inputs->BSWButtonD
@@ -61,15 +60,13 @@
 #define MULTIFUNCTION03_MAX_POS				13
 #define MULTIFUNCTION04_MAX_POS				14
 #define MULTIFUNCTION05_MAX_POS				13
-#define MULTIFUNCTION06_MAX_POS				3
-#define MULTIFUNCTION07_MAX_POS				3
+#define MULTIFUNCTION06_MAX_POS				4
+#define MULTIFUNCTION07_MAX_POS				4
 #define MULTIFUNCTION08_MAX_POS				2
 #define MULTIFUNCTION09_MAX_POS				14
 #define MULTIFUNCTION10_MAX_POS				14
 #define MULTIFUNCTION11_MAX_POS				14
 #define MULTIFUNCTION12_MAX_POS				14
-#define MULTIFUNCTION13_MAX_POS				14
-#define MULTIFUNCTION14_MAX_POS				0
 
 // Default position
 #define MULTIFUNCTION01_DEF_POS				1		// the default positions of the maps on power up
@@ -84,8 +81,6 @@
 #define MULTIFUNCTION10_DEF_POS				1
 #define MULTIFUNCTION11_DEF_POS				1
 #define MULTIFUNCTION12_DEF_POS				1
-#define MULTIFUNCTION13_DEF_POS				1
-#define MULTIFUNCTION14_DEF_POS				1
 
 // Wrapping Enable
 #define MULTIFUNCTION01_WRAP				0		// 1 to enable wrapping of the map
@@ -100,8 +95,6 @@
 #define MULTIFUNCTION10_WRAP				1
 #define MULTIFUNCTION11_WRAP				1
 #define MULTIFUNCTION12_WRAP				1
-#define MULTIFUNCTION13_WRAP				1
-#define MULTIFUNCTION14_WRAP				1
 
 // Multifunction associations
 #define MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX		1
@@ -167,9 +160,10 @@ typedef enum _Shifts{
 }Shifts;
 
 typedef enum _ShiftType{
+	WithClutchAndSparkCut,
 	WithClutch,
-	NoClutchNoSparkCut,
-	SparkCut
+	SparkCut,
+	NoClutchNoSparkCut
 }ShiftType;
 
 typedef enum _AntistallState{
@@ -181,8 +175,8 @@ typedef enum _AntistallState{
 
 typedef struct {
 
-	ControlError NControlErrorStatus;		// bit word of the various controller errors
-	ControlError NControlErrorStatusShadow;	// it gets used for the diagnostics and thud gets zeroed after 1 second, in order to be able to see the various errors
+	uint32_t NControlErrorStatus;		// bit word of the various controller errors
+	uint32_t NControlErrorStatusShadow;	// it gets used for the diagnostics and thud gets zeroed after 1 second, in order to be able to see the various errors
 	ControlError NControlErrorStatusLogged;	// it keeps the last error seen
 
 	// GEAR

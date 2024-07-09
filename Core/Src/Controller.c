@@ -31,7 +31,7 @@ float rClutchPaddle_xClutchTargetMap[2][CLUTCH_PADDLE_TARGET_MAP_SIZE] = { // th
 #define CheckEvent(event_) (MyInputs->nEventStatus >> (uint32_t)(event_)) & 0x1
 #define CheckFault(fault_) (MyInputs->nFaultStatus >> (uint32_t)(fault_)) & 0x1
 
-#define RaiseControlError(fault_) {do{ MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = fault_; MyOutputs->NControlErrorStatusShadow |= MyOutputs->NControlErrorStatus; }while(0);}
+#define RaiseControlError(fault_) { do { MyOutputs->NControlErrorStatus |= (1 << (uint32_t)(fault_)); MyOutputs->NControlErrorStatusLogged = fault_; MyOutputs->NControlErrorStatusShadow |= MyOutputs->NControlErrorStatus; } while(0);}
 #define ClearControlError(fault_) MyOutputs->NControlErrorStatus &= ~(1 << (uint32_t)(fault_))
 #define CheckControlError(fault_) (MyOutputs->NControlErrorStatus >> (uint32_t)(fault_)) & 0x1
 
@@ -56,8 +56,6 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	outputs->NMultifunctionMaxPos[9] = MULTIFUNCTION10_MAX_POS;
 	outputs->NMultifunctionMaxPos[10] = MULTIFUNCTION11_MAX_POS;
 	outputs->NMultifunctionMaxPos[11] = MULTIFUNCTION12_MAX_POS;
-	outputs->NMultifunctionMaxPos[12] = MULTIFUNCTION13_MAX_POS;
-	outputs->NMultifunctionMaxPos[13] = MULTIFUNCTION13_MAX_POS;
 
 	// default values
 	outputs->NMultifunctionDefMask[0] = (MULTIFUNCTION01_DEF_POS <= MULTIFUNCTION01_MAX_POS ? MULTIFUNCTION01_DEF_POS : MULTIFUNCTION01_MAX_POS);
@@ -72,8 +70,6 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	outputs->NMultifunctionDefMask[9] = (MULTIFUNCTION10_DEF_POS <= MULTIFUNCTION10_MAX_POS ? MULTIFUNCTION10_DEF_POS : MULTIFUNCTION10_MAX_POS);;
 	outputs->NMultifunctionDefMask[10] = (MULTIFUNCTION11_DEF_POS <= MULTIFUNCTION11_MAX_POS ? MULTIFUNCTION11_DEF_POS : MULTIFUNCTION11_MAX_POS);;
 	outputs->NMultifunctionDefMask[11] = (MULTIFUNCTION12_DEF_POS <= MULTIFUNCTION12_MAX_POS ? MULTIFUNCTION12_DEF_POS : MULTIFUNCTION12_MAX_POS);;
-	outputs->NMultifunctionDefMask[12] = (MULTIFUNCTION13_DEF_POS <= MULTIFUNCTION13_MAX_POS ? MULTIFUNCTION13_DEF_POS : MULTIFUNCTION13_MAX_POS);;
-	outputs->NMultifunctionDefMask[13] = (MULTIFUNCTION14_DEF_POS <= MULTIFUNCTION14_MAX_POS ? MULTIFUNCTION14_DEF_POS : MULTIFUNCTION14_MAX_POS);;
 
 	// wrapping
 	outputs->BMultifunctionWrap[0] = MULTIFUNCTION01_WRAP;
@@ -88,8 +84,6 @@ void InitController(InputStruct *inputs, OutputStruct *outputs) {
 	outputs->BMultifunctionWrap[9] = MULTIFUNCTION10_WRAP;
 	outputs->BMultifunctionWrap[10] = MULTIFUNCTION11_WRAP;
 	outputs->BMultifunctionWrap[11] = MULTIFUNCTION12_WRAP;
-	outputs->BMultifunctionWrap[12] = MULTIFUNCTION13_WRAP;
-	outputs->BMultifunctionWrap[13] = MULTIFUNCTION13_WRAP;
 
 
 	NMultifunctionActiveSwitchPrev = MyInputs->NSwitchA;
@@ -161,8 +155,10 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 		if(!MyInputs->BrClutchPaddleInError) {
 
 			// we select the clutch paddle map based on the map index of the multifunction and copy it to the local array
-			memcpy((float*)rClutchPaddle_xClutchTargetMap[1], (float*)rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]], CLUTCH_PADDLE_TARGET_MAP_SIZE);
-
+//			memcpy((float*)rClutchPaddle_xClutchTargetMap[1], (float*)rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]-1], CLUTCH_PADDLE_TARGET_MAP_SIZE);
+			for(uint8_t i=0; i<CLUTCH_PADDLE_TARGET_MAP_SIZE; i++) {
+				rClutchPaddle_xClutchTargetMap[1][i] = rClutchPaddle_xClutchTargetMaps[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]-1][i];
+			}
 			// we dynamically refine the clutch map
 			for(uint8_t i=0; i<CLUTCH_PADDLE_TARGET_MAP_SIZE; i++) {
 
@@ -200,7 +196,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// we take the maximum target generated from the Antistall/Protection strategy, the one request
 		// from the driver and the shifter requests when enabled from the respective strategy
-		MyOutputs->xClutchTarget = MAX(MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift)), MyOutputs->xClutchTargetMax);
+		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -264,7 +260,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->BUseButtonsForMultifunction = 1;
 			NMFIdx = MyOutputs->NMultifunctionActiveSwitch - 1;	// to go from 1-14 to 0-13 indexing for the arrays
 
-			MyOutputs->NDispalyPagePrev = MyOutputs->NDispalyPage;	// we save and change the page number here
+			if(MyOutputs->NDispalyPage != DISPLAY_MULTIFUNCTION_PAGE) MyOutputs->NDispalyPagePrev = MyOutputs->NDispalyPage;	// we save and change the page number here
 			MyOutputs->NDispalyPage = DISPLAY_MULTIFUNCTION_PAGE;
 		}
 
@@ -273,8 +269,8 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->BMultifunctionNextPosState = 1;
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
 
-			if(MyOutputs->NMultifunction[NMFIdx] + 1 >= MyOutputs->NMultifunctionMaxPos[NMFIdx]) {
-				if(MyOutputs->BMultifunctionWrap[NMFIdx]) MyOutputs->NMultifunction[NMFIdx] = 0;
+			if(MyOutputs->NMultifunction[NMFIdx] + 1 > MyOutputs->NMultifunctionMaxPos[NMFIdx]) {
+				if(MyOutputs->BMultifunctionWrap[NMFIdx]) MyOutputs->NMultifunction[NMFIdx] = 1;
 			}
 			else {
 				MyOutputs->NMultifunction[NMFIdx] ++;
@@ -288,7 +284,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->BMultifunctionPrevPosState = 1;
 			MyOutputs->tMultifunctionActiveOnRot = tControllerTimmer + MULTIFUNCTION_ACTIVE_TIME;
 
-			if(MyOutputs->NMultifunction[NMFIdx] - 1 < 0 ) {
+			if(MyOutputs->NMultifunction[NMFIdx] - 1 <= 0 ) {
 				if(MyOutputs->BMultifunctionWrap[NMFIdx]) MyOutputs->NMultifunction[NMFIdx] = MyOutputs->NMultifunctionMaxPos[NMFIdx] - 1;
 			}
 			else {
@@ -299,7 +295,7 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 			MyOutputs->BMultifunctionPrevPosState = 0;
 		}
 
-		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer) {
+		if(MyOutputs->tMultifunctionActiveOnRot < tControllerTimmer && MyOutputs->BUseButtonsForMultifunction) {
 			MyOutputs->BUseButtonsForMultifunction = 0;
 			// here we return to the actual page
 			MyOutputs->NDispalyPage = MyOutputs->NDispalyPagePrev;
@@ -307,13 +303,13 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 
 		// Here we assign the various multifunction maps to the various indexes
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]) MyOutputs->xClutchTargetMax = xClutchTargetMaxMap[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]) MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]) MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1]) MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1]) MyOutputs->NxClutchReleaseOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1]) MyOutputs->NUpShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1];
-		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1]) MyOutputs->NDnShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]) MyOutputs->xClutchTargetMax = xClutchTargetMaxMap[MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_TARGET_MAX_IDX-1]-1];
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1]) MyOutputs->NxClutchPaddleMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_MAP_IDX-1] - 1;
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1]) MyOutputs->NxClutchPaddleOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_PADDLE_OFFSET_IDX-1] - 1;
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1]) MyOutputs->NxClutchReleaseMapIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_MAP_IDX-1] - 1;
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1]) MyOutputs->NxClutchReleaseOffsetIdx = MyOutputs->NMultifunction[MULTIFUNCTION_CLUTCH_RELEASE_OFFSET_IDX-1] - 1;
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1]) MyOutputs->NUpShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_UPSHIFT_TYPE_IDX-1] - 1;
+		if(!MyOutputs->BMultifunctionOverride[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1]) MyOutputs->NDnShiftType = MyOutputs->NMultifunction[MULTIFUNCTION_DNSHIFT_TYPE_IDX-1] - 1;
 
 		// TODO: fill the rest...
 
@@ -485,7 +481,7 @@ void PRE_UPSHIFT_Event(void) {
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear + 1;											// we go to the next gear
 
-		if((MyOutputs->NUpShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_UPSHIFT) || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
+		if(((MyOutputs->NUpShiftType == WithClutch || MyOutputs->NUpShiftType == WithClutchAndSparkCut) && ALLOW_CLUTCH_ACT_DURING_UPSHIFT) || MyOutputs->BOverrideActuateClutchOnNextUpShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShiftShadow = xClutchTargetUpShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextUpShift = 0; 									// reset the strat for the next gear
 		}
@@ -493,7 +489,7 @@ void PRE_UPSHIFT_Event(void) {
 			MyOutputs->xClutchTargetShiftShadow = 0;
 		}
 
-		if(MyOutputs->NUpShiftType == SparkCut && ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
+		if((MyOutputs->NUpShiftType == SparkCut || MyOutputs->NUpShiftType == WithClutchAndSparkCut) && ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
 
 		PRE_UPSHIFT_Exit();
 		SHIFTING_Entry();
@@ -551,7 +547,7 @@ void PRE_DNSHIFT_Event(void) {
 	if(!MyOutputs->NControlErrorStatus) {
 		MyOutputs->NGearTarget = MyInputs->NGear - 1;												// we go to the previous gear
 
-		if((MyOutputs->NDnShiftType == WithClutch && ALLOW_CLUTCH_ACT_DURING_DNSHIFT) || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
+		if(((MyOutputs->NDnShiftType == WithClutch || MyOutputs->NDnShiftType == WithClutchAndSparkCut) && ALLOW_CLUTCH_ACT_DURING_DNSHIFT) || MyOutputs->BOverrideActuateClutchOnNextDnShift) {		// we check for clutch strategy during shift
 			MyOutputs->xClutchTargetShiftShadow = xClutchTargetDnShiftMap[MyInputs->NGear];
 			MyOutputs->BOverrideActuateClutchOnNextDnShift = 0; 									// reset the strat for the next gear
 		}
@@ -559,7 +555,7 @@ void PRE_DNSHIFT_Event(void) {
 			MyOutputs->xClutchTargetShiftShadow = 0;
 		}
 
-		if(MyOutputs->NDnShiftType == SparkCut && ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
+		if((MyOutputs->NDnShiftType == SparkCut || MyOutputs->NDnShiftType == WithClutchAndSparkCut) && ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
 
 		PRE_DNSHIFT_Exit();
 		SHIFTING_Entry();

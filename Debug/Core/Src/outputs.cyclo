@@ -1,0 +1,3 @@
+../Core/Src/outputs.c:37:6:InitOutputs	1
+../Core/Src/outputs.c:48:6:WriteOutputs	2
+../Core/Src/outputs.c:204:6:CAN_TX	7

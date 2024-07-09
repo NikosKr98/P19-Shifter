@@ -1,0 +1,8 @@
+../Core/Src/inputs.c:44:6:ReadInputs	67
+../Core/Src/inputs.c:416:6:InitInputs	1
+../Core/Src/inputs.c:421:6:CAN_RX	4
+../Core/Src/inputs.c:467:10:MyHalfBufferAverage	3
+../Core/Src/inputs.c:482:6:HAL_CAN_RxFifo0MsgPendingCallback	1
+../Core/Src/inputs.c:486:6:HAL_CAN_RxFifo1MsgPendingCallback	1
+../Core/Src/inputs.c:490:6:HAL_CAN_ErrorCallback	1
+../Core/Src/inputs.c:494:6:HAL_ADC_ConvHalfCpltCallback	2

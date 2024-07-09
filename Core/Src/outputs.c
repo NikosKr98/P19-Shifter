@@ -37,8 +37,8 @@ void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data);
 void InitOutputs(void) {
 
 	// we start the timer with initial target (CLUTCH_REST_POSITION) the released value (make the #define and also use it in the maps??)
-	__HAL_TIM_SET_AUTORELOAD(&htim1, (CLUTCH_SERVO_ABSOLUTE_MIN*2) -1 );
-	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, (CLUTCH_SERVO_ABSOLUTE_MIN*2)/2);
+	__HAL_TIM_SET_AUTORELOAD(&htim1, (CLUTCH_SERVO_MIN*2) -1 );
+	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, (CLUTCH_SERVO_MIN*2)/2);
 
 	// set the duty cycle to 0 before enabling the PWM in order to avoid unwanted movement
 	__HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2, 0);
@@ -58,10 +58,10 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	outputs->rServoDemand  =(uint16_t)round(outputs->rServoDemandRaw);
 
 	// Clamping to avoid out of bounds values
-	outputs->rServoDemand = CLAMP(outputs->rServoDemand, CLUTCH_SERVO_ABSOLUTE_MIN, CLUTCH_SERVO_ABSOLUTE_MAX);
+	outputs->rServoDemand = CLAMP(outputs->rServoDemand, CLUTCH_SERVO_ABSOLUTE_MAX, CLUTCH_SERVO_ABSOLUTE_MIN);
 
 	// Actuated flag (it will be applied on the next cycle because it gets saved in the controller)
-	outputs->BClutchActuated = (outputs->rServoDemand >= CLUTCH_SERVO_ACTUATED ? 1 : 0);
+	outputs->BClutchActuated = (outputs->rServoDemand <= CLUTCH_SERVO_ACTUATED ? 1 : 0);
 
 	// The output for the clutch servo is a +5V (or 3.3V) pulse 50% duty cycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 	// we double the auto reload counter to multiply the frequency by 2
@@ -80,8 +80,8 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	// Shifting
 
 	// TODO: Think about doing a check if both requests are 1 in order to not do nothing or to always give priority to up or down shift
-	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, outputs->BUpShiftPortState);
-	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, outputs->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO02_GPIO_Port, DO02_Pin, outputs->BDnShiftPortState);
+	HAL_GPIO_WritePin(DO03_GPIO_Port, DO03_Pin, outputs->BUpShiftPortState);
 
 
 	// Toggle Switches
@@ -139,7 +139,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	CAN_TX(SHIFTER_TX_ID02, 8, TxData);
 
 	// ---------------------------------------------------------------------------------------------------
-	// Frame 2: Shifter Control 2
+	// Frame 3: Shifter Control 2
 
 	TxData[0] = 0;	// Reserved for ECU control
 	TxData[1] = 0;
@@ -153,7 +153,7 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	CAN_TX(SHIFTER_TX_ID03, 8, TxData);
 
 	// ---------------------------------------------------------------------------------------------------
-	// Frame 3: Shifter Status
+	// Frame 4: Shifter Status
 
 	TxData[0] = (uint8_t)(inputs->NInputsStatusWord >> 0);
 	TxData[1] = (uint8_t)(inputs->NInputsStatusWord >> 8);
@@ -166,6 +166,36 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	TxData[7] = (uint8_t)(outputs->NControllerStatusWord >> 24);
 
 	CAN_TX(SHIFTER_TX_ID04, 8, TxData);
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 5: ECU
+
+
+
+
+	// ---------------------------------------------------------------------------------------------------
+	// Frame 6: ECU	Switch Control
+
+	TxData[0] = 0;
+	TxData[1] = 0;
+	TxData[2] = 0;
+	TxData[3] = 0;
+	TxData[4] = 0;
+	TxData[5] = 0;
+
+	TxData[6] = 0;
+	TxData[6] |= (inputs->BLaunchRequest	& 0x01) << 0;
+	TxData[6] |= (outputs->BSparkCut		& 0x01) << 1;
+	TxData[6] |= (0						  	& 0x01) << 2;
+	TxData[6] |= (0							& 0x01) << 3;
+	TxData[6] |= (0							& 0x01) << 4;
+	TxData[6] |= (0							& 0x01) << 5;
+	TxData[6] |= (0							& 0x01) << 6;
+	TxData[6] |= (0							& 0x01) << 7;
+
+	TxData[7] = 0;
+
+	CAN_TX(SHIFTER_TX_ID06, 8 , TxData);
 
 	// ---------------------------------------------------------------------------------------------------
 
@@ -181,6 +211,7 @@ void CAN_TX(uint32_t ID, uint8_t dlc, uint8_t* data) {
 	CanTxHeader.IDE = CAN_ID_STD;
 	CanTxHeader.RTR = CAN_RTR_DATA;
 
+	__HAL_TIM_SET_COUNTER(&htim2, 0);
 	uint32_t wait = __HAL_TIM_GET_COUNTER(&htim2) + CAN_TX_TIMEOUT;
 	while((HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0) && (__HAL_TIM_GET_COUNTER(&htim2) < wait));
 

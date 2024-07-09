@@ -21,7 +21,10 @@ extern CAN_HandleTypeDef hcan;
 #define SHIFTER_TX_ID03 	0x322
 #define SHIFTER_TX_ID04 	0x323
 
-#define CAN_TX_TIMEOUT 200		// us of CAN timeout when sending a frame
+#define SHIFTER_TX_ID05 	0x610
+#define SHIFTER_TX_ID06 	0x666
+
+#define CAN_TX_TIMEOUT 2000		// us of CAN timeout when sending a frame
 
 // DIGITAL OUT
 	// DO01: CLUTCH PWM

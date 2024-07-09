@@ -114,14 +114,16 @@ void ReadInputs(InputStruct *inputs){
 
 	// False Neutral detection
 	if(inputs->NGearRaw >= NGearRawLimsMaxMap[inputs->NGear] || inputs->NGearRaw <= NGearRawLimsMinMap[inputs->NGear]) {
-		tBFalseNeutral = tInputsTimmer + FALSE_NEUTRAL_DEBOUNCE;
-		BFalseNeutralState = 1;
+		if(!BFalseNeutralState) {
+			BFalseNeutralState = 1;
+			tBFalseNeutral = tInputsTimmer + FALSE_NEUTRAL_DEBOUNCE;
+		}
 	}
 	else {
 		BFalseNeutralState = 0;
 	}
 
-	if(tBFalseNeutral < tInputsTimmer && BFalseNeutralState) { //leave some time for the NGear to settle before deciding if it is in false neutral and to avoid flickering
+	if((tBFalseNeutral < tInputsTimmer) && BFalseNeutralState) { //leave some time for the NGear to settle before deciding if it is in false neutral and to avoid flickering
 		inputs->BFalseNeutral = 1; // it gets reset inside the controller code at the post shift phase after a successful gear change
 	}
 
@@ -270,7 +272,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// Launch Input Strategy
 	if(inputs->BSteeringWheelFitted) {
-		inputs->BLaunchRequest = inputs->BSWButtonD;
+		inputs->BLaunchRequest = inputs->BSWButtonB;
 		inputs->BLaunchRequestInError = 0;
 	}
 	else {
@@ -452,7 +454,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
 	 case ECU_TX_ID01:
 		 tCANECULastSeen = HAL_GetTick();
-		 nEngineRawCAN = (uint16_t)(RxBuffer[0] << 8 | RxBuffer[1]);
+		 nEngineRawCAN = (uint16_t)(RxBuffer[1] << 8 | RxBuffer[0]);
 		 break;
 
 	 default:
