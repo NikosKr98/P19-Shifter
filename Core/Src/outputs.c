@@ -94,7 +94,6 @@ void WriteOutputs(OutputStruct *output) {
 
 	CAN_TX(ECU_SWITCH_TX_ID, 8 , CANTxBuffer);
 	// CAN
-	//	CAN_TX(ECU_SWITCH_TX_ID, 8 , CANTxBuffer);
 	// add the info of the shutDown (DriverKill) in the CAN for others to see
 	// send the command for the outputs of the steering (LEDS) (think about sending frequency and duty instead of On-OFF
 }
