@@ -43,7 +43,7 @@
 #define xCLUTCH_FULLY_ENGAGED				1400	// the fully engaged position of the clutch
 #define xCLUTCH_DNSHIFT_TARGET				1400	// the clutch target opening during downshifts
 #define xCLUTCH_ABSOLUTE_MIN				2100	// min clutch position value
-#define xCLUTCH_ABSOLUTE_MAX				900	// max clutch position value
+#define xCLUTCH_ABSOLUTE_MAX				900		// max clutch position value
 
 
 

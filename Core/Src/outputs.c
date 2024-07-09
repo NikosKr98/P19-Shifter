@@ -51,7 +51,7 @@ void WriteOutputs(OutputStruct *output) {
 	// CLUTCH
 
 	// Clamping to avoid out of bounds values
-	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MIN, xCLUTCH_ABSOLUTE_MAX);
+	xClutchTargetOut = CLAMP(output->xClutchTarget, xCLUTCH_ABSOLUTE_MAX, xCLUTCH_ABSOLUTE_MIN);
 
 	// The output for the clutch servo is a +5V (or 3.3V) pulse 50% duty cycle 1500us +- 400us (1500 central position, 1900 or 1100 is fully pressed) to
 
