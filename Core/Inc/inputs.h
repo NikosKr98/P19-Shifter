@@ -18,7 +18,7 @@
 // ANALOGS
 #define MCU_SUPPLY_VOLTAGE						3.34f
 #define VSUPPLY_DIVIDER_GAIN					0.22020f
-#define VUPDN_NOPRESS							2.5f	// the voltage level above which we consider both buttons not pressed
+#define VUPDN_NOPRESS							2.45f	// the voltage level above which we consider both buttons not pressed
 #define VUPDN_UPSHIFT_MAX						1.1f	// max limit to consider upshift pressed
 #define VUPDN_UPSHIFT_MIN						0.95f	// min limit to consider upshift pressed
 #define VUPDN_DNSHIFT_MAX						1.9f	// max limit to consider dnshift pressed

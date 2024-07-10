@@ -27,7 +27,7 @@
 // ANTISTALL
 #define ANTISTALL_ENABLED					1		// antistall enable strategy
 #define ANTISTALL_MIN_ACTIVATION_GEAR		1		// the gear from which we enable antistall
-#define ANTISTALL_TRIGGER_TIME				1000	// time for antistall to be triggered
+#define ANTISTALL_TRIGGER_TIME				500		// time for antistall to be triggered
 #define ANTISTALL_CLUTCHPADDLE_PRESSED		95		// the clutch paddle % we need to press the paddle to deactivate the antistall
 #define ANTISTALL_CLUTCHPADDLE_RELEASED		40		// the clutch paddle % we need to have released the paddle for the antistall control to start working
 
@@ -74,7 +74,7 @@
 #define MULTIFUNCTION03_DEF_POS				7
 #define MULTIFUNCTION04_DEF_POS				1
 #define MULTIFUNCTION05_DEF_POS				7
-#define MULTIFUNCTION06_DEF_POS				1
+#define MULTIFUNCTION06_DEF_POS				3
 #define MULTIFUNCTION07_DEF_POS				1
 #define MULTIFUNCTION08_DEF_POS				1
 #define MULTIFUNCTION09_DEF_POS				1
@@ -208,8 +208,8 @@ typedef struct {
 	uint16_t NTotalShifts;					// total number of shifts done since power up
 	uint16_t NShiftsLeftEstimated;			// estimated number of shifts left
 	uint8_t BShiftInProgress;				// 1 when the state machine is performing a shift
-	uint8_t NUpShiftType;					// UpShift type index selected from the multifunction
-	uint8_t NDnShiftType;					// DpShift type index selected from the multifunction
+	ShiftType NUpShiftType;					// UpShift type index selected from the multifunction
+	ShiftType NDnShiftType;					// DpShift type index selected from the multifunction
 
 	// Steering Wheel LED
 	uint8_t BSWLEDA;

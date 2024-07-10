@@ -7,11 +7,11 @@
 ../Core/Src/Controller.c:467:6:PRE_UPSHIFT_Entry	1
 ../Core/Src/Controller.c:475:6:PRE_UPSHIFT_Exit	1
 ../Core/Src/Controller.c:478:6:PRE_UPSHIFT_Event	9
-../Core/Src/Controller.c:508:6:PRE_UPSHIFT_Run	11
+../Core/Src/Controller.c:508:6:PRE_UPSHIFT_Run	10
 ../Core/Src/Controller.c:533:6:PRE_DNSHIFT_Entry	1
 ../Core/Src/Controller.c:541:6:PRE_DNSHIFT_Exit	1
 ../Core/Src/Controller.c:544:6:PRE_DNSHIFT_Event	9
-../Core/Src/Controller.c:573:6:PRE_DNSHIFT_Run	12
+../Core/Src/Controller.c:573:6:PRE_DNSHIFT_Run	11
 ../Core/Src/Controller.c:596:6:SHIFTING_Entry	7
 ../Core/Src/Controller.c:641:6:SHIFTING_Exit	1
 ../Core/Src/Controller.c:644:6:SHIFTING_Event	3

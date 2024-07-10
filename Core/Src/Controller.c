@@ -512,7 +512,7 @@ void PRE_UPSHIFT_Run(void) {
 	}
 	else { ClearControlError(NEUTRAL_TO_FIRST_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0 && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift up with too low rpm
+	if(MyInputs->nEngine < nEngineUpShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0)) {	// trying to shift up with too low rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_UPSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_UPSHIFT); }
@@ -577,7 +577,7 @@ void PRE_DNSHIFT_Run(void) {
 	}
 	else { ClearControlError(FIRST_TO_NEUTRAL_WITH_NO_CLUTCH); }
 
-	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0 && MyInputs->rClutchPaddle >= CLUTCH_PADDLE_THRESHOLD_FOR_FIRST)) {	// trying to shift down with too high rpm
+	if(MyInputs->nEngine > nEngineDnShiftMap[MyInputs->NGear] && !MyInputs->BnEngineInError && !(ALLOW_GEARS_WITH_CAR_STOPPED && MyInputs->nEngine == 0)) {	// trying to shift down with too high rpm
 		RaiseControlError(RPM_ILLEGAL_FOR_DNSHIFT);
 	}
 	else { ClearControlError(RPM_ILLEGAL_FOR_DNSHIFT); }

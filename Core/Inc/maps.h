@@ -102,11 +102,11 @@ static const float NSWitchAmap[2][SWITCHA_MAP_SIZE] = {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Shifting Times
 
-static const uint32_t tUpShift[TOTAL_GEARS] = { 				100,	// neutral to 1st total shifting time (ms)
-																300,	// 1st to 2nd
-																300,	// 2nd to 3rd
-																300,	// 3rd to 4th
-																300,	// 4th to 5th
+static const uint32_t tUpShift[TOTAL_GEARS] = { 				80,	// neutral to 1st total shifting time (ms)
+																80,	// 1st to 2nd
+																80,	// 2nd to 3rd
+																80,	// 3rd to 4th
+																80,	// 4th to 5th
 																0
 };
 
@@ -191,19 +191,19 @@ static const uint16_t xClutchReleaseMap[CLUTCH_RELEASE_MAPS][CLUTCH_RELEASE_MAP_
 // nEngine
 
 static const uint16_t nEngineAntistallMap[TOTAL_GEARS] = { 		0,		// min rpm threshold (not needed for neutral gear)
-																800,	// 1st
-																800,	// 2nd
-																800,	// 3rd
-																800,	// 4th
-																800		// 5th
+																1400,	// 1st
+																1400,	// 2nd
+																1400,	// 3rd
+																1400,	// 4th
+																1400	// 5th
 };
 
 static const uint16_t nEngineUpShiftMap[TOTAL_GEARS] = { 		0,		// neutral to 1st gear min rpm threshold
-																0,		// 1st to 2nd
-																0,		// 2nd to 3rd
-																0,		// 3rd to 4th
-																0,		// 4th to 5th
-																0
+																2000,		// 1st to 2nd
+																2000,		// 2nd to 3rd
+																2000,		// 3rd to 4th
+																2000,		// 4th to 5th
+																2000
 };
 
 
