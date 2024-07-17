@@ -18,20 +18,23 @@
 // ANALOGS
 #define MCU_SUPPLY_VOLTAGE						3.34f
 #define VSUPPLY_DIVIDER_GAIN					0.22020f
-#define VUPDN_NOPRESS							2.5f	// the voltage level above which we consider both buttons not pressed
+#define VUPDN_NOPRESS							2.45f	// the voltage level above which we consider both buttons not pressed
 #define VUPDN_UPSHIFT_MAX						1.1f	// max limit to consider upshift pressed
 #define VUPDN_UPSHIFT_MIN						0.95f	// min limit to consider upshift pressed
 #define VUPDN_DNSHIFT_MAX						1.9f	// max limit to consider dnshift pressed
 #define VUPDN_DNSHIFT_MIN						1.7f	// min limit to consider dnshift pressed
 #define VUPDN_BOTHPRESSED_MAX					0.90f	// max limit to consider both buttons pressed
 #define VUPDN_BOTHPRESSED_MIN					0.8f	// min limit to consider both buttons pressed
+#define VUPDN_DEBOUNCE							50		// debounce time for analog reading
 
 // GEAR
-#define VNGEAR_MARGIN_MIN 						0.2f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
-#define VNGEAR_MARGIN_MAX 						0.2f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define NGEAR_INERROR_DEFAULT					2		// default value when the gear input is in error
+#define VNGEAR_MARGIN_MIN 						0.1f	// the voltage below the min map voltage we accept to arrive before declaring out of bounds
+#define VNGEAR_MARGIN_MAX 						0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
+#define FALSE_NEUTRAL_DEBOUNCE					40		// time to leave before detecting and declaring a false neutral
 
 // CLUTCH
-#define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if evey input is in error
+#define rCLUTCH_PADDLE_IN_ERROR_DEFAULT			0		// the default value if every input is in error
 #define CLUTCH_PADDLE_PRESSED_THRESHOLD 		80		// Threshold % to consider Clutch Paddle as pressed
 #define CLUTCH_PADDLE_RELEASED_THRESHOLD		0		// Threshold % to consider Clutch Paddle as released
 #define CLUTCH_PADDLE_MIN						0		// min clutch paddle percentage !!!!! ATTENTION !!!!!, Changing these will affect the maps and the various controls! better to leave as is
@@ -40,18 +43,18 @@
 #define VrCLUTCH_PADDLE_MARGIN_MAX 				0.1f	// the voltage above the max map voltage we accept to arrive before declaring out of bounds
 #define rCLUTCH_ON_DECLUTCH						100		// the desired clutch percentage when pressing the delutch button
 
-// TOGGLE SWITCHES
-#define TOGGLE_SWITCH_DEBOUNCE					1000	// time interval for next toggle
+// Rotary Switch
+#define VNSWITCH_MARGIN							0.1f	// the voltage above and below the map voltage we accept to arrive before declaring out of bounds
 
 // DRIVER KILL
 #define DRIVER_KILL_DEBOUNCE					200		// debouncing for digital read
 
 // ENGINE RPM
-#define nENGINE_IN_ERROR_DEFAULT				0		// the defualt nEngine value if the input is in error
+#define nENGINE_IN_ERROR_DEFAULT				0		// the default nEngine value if the input is in error
 
 // CAN
-#define SIU_RX_ID 								0x310
-#define ECU_RX_ID 								0x600
+#define SIU_TX_ID01								0x310
+#define ECU_TX_ID01								0x600
 
 #define STEERING_WHEEL_FITTED_INTERVAL			500		// after this time that we have not seen the message from SW we declare it not fitted/dead
 #define ECU_COMMS_LOST_INTERVAL					500		// after this time that we have not seen the message from the ECU we declare it not fitted/dead
@@ -77,12 +80,6 @@ typedef enum _Event {
 	CLUTCH_PADDLE_RELEASE_EVT
 } Event;
 
-
-/* FAULT DEFINITION */
-typedef enum _Fault {
-	NGEAR_FAULT,
-} Fault;
-
 /* SIGNAL SOURCE  */
 typedef enum _SigSource {
 	CAN,
@@ -93,7 +90,6 @@ typedef enum _SigSource {
 typedef struct _InputStruct {
 
 	uint32_t nEventStatus; 			// 32-bit bitfield for events
-	uint32_t nFaultStatus; 			// 32-bit bitfield for faults
 
 	// Analog Inputs
 	float VSHIFTERAnalog01;
@@ -125,6 +121,7 @@ typedef struct _InputStruct {
 	float VNGear;							// the voltage of the gear potentiometer
 	float NGearRaw;							// raw gear value interpolated from the NGear 2D map
 	uint8_t NGear;							// actual gear based on filtered gear potentiometer voltage and conditioned value
+	uint8_t BFalseNeutral;					// flag to indicate that the gear is not engaged properly and we are between 2 gears
 
 	// Shift Inputs
 	uint8_t BUpShiftButtonCANInError;		// 1 if steering wheel CAN UpShift button is in Error
@@ -169,11 +166,11 @@ typedef struct _InputStruct {
 	uint8_t BDeclutchRequestInError;		// 1 if steering wheel CAN is in error or not fitted
 	uint8_t BDeclutchRequest;				// De-Clutch Request (reflects the state of the respective button whrn the Steering Wheel is connected and not in error)
 
-	// Toggle Switches
-	uint8_t NToggleSwitch01State;
-	uint8_t NToggleSwitch02State;
-	uint8_t NToggleSwitch03State;
-	uint8_t NToggleSwitch04State;
+	// Rotary Switch
+	float VSwhitchA;						// the voltage of the rotary Switch A
+	float NSwitchARaw;						// the raw switch value, with decimals interpolated from the switch map
+	uint8_t NSwitchA;						// the integer switch value
+	uint8_t BNSwitchAInError;				// error flag when the measured voltage is out of range
 
 	// Driver Kill (Shutdown)
 	uint8_t BDriverKill;					// 1 if the shutdown is open and 0 if it is closed (armed)
@@ -190,10 +187,11 @@ typedef struct _InputStruct {
 
 	float VSupply;							// PCB Voltage Input Diagnostic
 
+	uint32_t NInputsStatusWord;				// bit word for flags and various status bits
+
 } InputStruct;
 
 void InitInputs(void);
 void ReadInputs(InputStruct *input);
-uint8_t CheckFaults(InputStruct *inputs);
 
 #endif /* INC_INPUTS_H_ */

@@ -129,6 +129,7 @@ int main(void)
 
   HAL_Delay(50);	// we give some time to the peripherals to start and produce normal values
 
+  uint32_t tMain, tExecution;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -137,10 +138,11 @@ int main(void)
 
 	  if(BCycleTimerFlag) {		// BCycleTimerFlag becomes 1 in the Timer callback below
 		  BCycleTimerFlag = 0;
-
+		  tMain = HAL_GetTick();
 		  ReadInputs(&Inputs);
 		  Controller(&Inputs,&Outputs);
-		  WriteOutputs(&Outputs);
+		  WriteOutputs(&Inputs,&Outputs);
+		  tExecution = HAL_GetTick() - tMain;
 	  }
 
     /* USER CODE END WHILE */
@@ -346,7 +348,7 @@ static void MX_CAN_Init(void)
 
   	// STEERING WHEEL RECEIVE
    CAN_FilterTypeDef FilterConfig0;
-   FilterConfig0.FilterIdHigh = SIU_RX_ID << 5 ;
+   FilterConfig0.FilterIdHigh = SIU_TX_ID01 << 5 ;
    FilterConfig0.FilterIdLow = 0;
    FilterConfig0.FilterMaskIdHigh = 0xffe0;
    FilterConfig0.FilterMaskIdLow = 0;
@@ -362,7 +364,7 @@ static void MX_CAN_Init(void)
  	}
 
    CAN_FilterTypeDef FilterConfig01;
-   FilterConfig01.FilterIdHigh = SIU_RX_ID << 5 ;
+   FilterConfig01.FilterIdHigh = SIU_TX_ID01 << 5 ;
    FilterConfig01.FilterIdLow = 0;
    FilterConfig01.FilterMaskIdHigh = 0xffe0;
    FilterConfig01.FilterMaskIdLow = 0;
@@ -379,7 +381,7 @@ static void MX_CAN_Init(void)
 
  	// ECU RECEIVE
    CAN_FilterTypeDef FilterConfig1;
-   FilterConfig1.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig1.FilterIdHigh = ECU_TX_ID01 << 5 ;
    FilterConfig1.FilterIdLow = 0;
    FilterConfig1.FilterMaskIdHigh = 0xffe0;
    FilterConfig1.FilterMaskIdLow = 0;
@@ -395,7 +397,7 @@ static void MX_CAN_Init(void)
  	}
 
    CAN_FilterTypeDef FilterConfig11;
-   FilterConfig11.FilterIdHigh = ECU_RX_ID << 5 ;
+   FilterConfig11.FilterIdHigh = ECU_TX_ID01 << 5 ;
    FilterConfig11.FilterIdLow = 0;
    FilterConfig11.FilterMaskIdHigh = 0xffe0;
    FilterConfig11.FilterMaskIdLow = 0;
@@ -529,7 +531,7 @@ static void MX_TIM2_Init(void)
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();

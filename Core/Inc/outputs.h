@@ -16,11 +16,15 @@ extern TIM_HandleTypeDef htim2;
 extern CAN_HandleTypeDef hcan;
 
 
-#define DISPLAY_TX_ID 		0x320
-#define ECU_TX_ID 			0x610
-#define CAN_TX_TIMEOUT 		200		// us of CAN timeout when sending a frame
+#define SHIFTER_TX_ID01 	0x320
+#define SHIFTER_TX_ID02 	0x321
+#define SHIFTER_TX_ID03 	0x322
+#define SHIFTER_TX_ID04 	0x323
 
-#define ECU_SWITCH_TX_ID 	0x666
+#define SHIFTER_TX_ID05 	0x610
+#define SHIFTER_TX_ID06 	0x666
+
+#define CAN_TX_TIMEOUT 2000		// us of CAN timeout when sending a frame
 
 // DIGITAL OUT
 	// DO01: CLUTCH PWM
@@ -29,7 +33,7 @@ extern CAN_HandleTypeDef hcan;
 	// DO04: ECU (SPRACK CUT)
 
 void InitOutputs(void);
-void WriteOutputs(OutputStruct *output);
+void WriteOutputs(InputStruct *inputs, OutputStruct *outputs);
 
 
 #endif /* INC_OUTPUTS_H_ */

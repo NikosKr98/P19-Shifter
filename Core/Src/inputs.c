@@ -10,16 +10,14 @@
 
 // MACRO DEFINITIONS
 #define PushEvent(ins_, event_) ins_->nEventStatus |= (1 << (uint32_t)(event_))
-#define RaiseFault(ins_, fault_) ins_->nFaultStatus |= (1 << (uint32_t)(fault_))
-#define ClearFault(ins_, fault_) ins_->nFaultStatus &= ~(1 << (uint32_t)(fault_))
 
 // Timing variables
 uint32_t tInputsTimmer;
-uint32_t tToggleSwitch01, tToggleSwitch02, tToggleSwitch03, tToggleSwitch04;
-uint32_t tBDriverKillTimer;
+uint32_t tBDriverKillTimer, tBFalseNeutral, tVUpDn;
 
 // I/O Flags
 uint8_t BUpShiftRequested, BDnShiftRequested, BLaunchRequested, BDeclutchRequested, BClutchPaddlePressed;
+uint8_t BFalseNeutralState;
 
 // CAN
 volatile uint8_t BUpShiftButtonCAN, BUpShiftButtonCANInError;;
@@ -41,7 +39,6 @@ int8_t rClutchPaddleDeclutch;
 
 
 // private functions declaration
-uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw);
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side, uint8_t offset);
 
 void ReadInputs(InputStruct *inputs){
@@ -89,18 +86,10 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BSWButtonF = BButtonFCAN;
 
 	// ---------------------------------------------------------------------------------------------------
-
-	// TODO: we need to think the order of execution of the inputs (now they are a bit random)
-	// check if there are dependencies
-
-	// TODO: think about putting the analog read (buckup) buttons inside the CAN error state to gain some time during normal running
-	// or, do them at the same time and compare inputs
-
-	// ---------------------------------------------------------------------------------------------------
 	// Driver Kill
 
 		// Inverted logic!! DriverKill=1 means ShutDown is Open, DriverKill=0 means ShutDown is closed
-	if(inputs->NSHIFTERDIN04 & (tBDriverKillTimer < tInputsTimmer) && inputs->BDriverKill) {
+	if(inputs->NSHIFTERDIN04 && (tBDriverKillTimer < tInputsTimmer) && inputs->BDriverKill) {
 		inputs->BDriverKill = 0;
 		tBDriverKillTimer = tInputsTimmer + DRIVER_KILL_DEBOUNCE;
 	}
@@ -109,7 +98,7 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// NGear Conditioning
+	// NGear Input
 
 	// Analog Input
 	inputs->VNGear = inputs->VSHIFTERAnalog04;
@@ -117,20 +106,31 @@ void ReadInputs(InputStruct *inputs){
 	// mapping
 	inputs->BNGearInError = My2DMapInterpolate(TOTAL_GEARS, NGearMap, inputs->VNGear, &(inputs->NGearRaw), VNGEAR_MARGIN_MIN, VNGEAR_MARGIN_MAX);
 
-	// TODO: think about checking the float NGear for +-0.2 to define false neutral
-
 	// conditioning (round float to nearest integer)
 	inputs->NGear = (uint8_t)round(inputs->NGearRaw);
 
 	// CLAMPING
 	inputs->NGear = CLAMP(inputs->NGear, 0, MAX_GEAR);
 
+	// False Neutral detection
+	if(inputs->NGearRaw >= NGearRawLimsMaxMap[inputs->NGear] || inputs->NGearRaw <= NGearRawLimsMinMap[inputs->NGear]) {
+		if(!BFalseNeutralState) {
+			BFalseNeutralState = 1;
+			tBFalseNeutral = tInputsTimmer + FALSE_NEUTRAL_DEBOUNCE;
+		}
+	}
+	else {
+		BFalseNeutralState = 0;
+	}
+
+	if((tBFalseNeutral < tInputsTimmer) && BFalseNeutralState) { //leave some time for the NGear to settle before deciding if it is in false neutral and to avoid flickering
+		inputs->BFalseNeutral = 1; // it gets reset inside the controller code at the post shift phase after a successful gear change
+	}
+
 	// check for errors
 	if(inputs->BNGearInError) {
-		RaiseFault(inputs, NGEAR_FAULT);
-		// inputs->NGear = 1; // TODO: is it correct??? not sure. I would put 1 to be able trigger antistall and to be generic for all functions
+		inputs->NGear = NGEAR_INERROR_DEFAULT;
 	}
-	else ClearFault(inputs, NGEAR_FAULT);
 
 	// ---------------------------------------------------------------------------------------------------
 	// Steering Wheel Fitted Check
@@ -155,7 +155,7 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// Clutch Paddle Conditioning
+	// Clutch Paddle Inputs
 
 	// CAN Input
 	inputs->BrClutchPaddleRawCANInError = BrClutchPaddleRawInErrorCAN;
@@ -163,7 +163,7 @@ void ReadInputs(InputStruct *inputs){
 
 	// Analog Input & Mapping
 	inputs->VrClutchPaddleRawAnalog = inputs->VSHIFTERAnalog02;
-	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_PADDLE_MARGIN_MIN, VrCLUTCH_PADDLE_MARGIN_MAX);
+	inputs->BrClutchPaddleRawAnalogInError= My2DMapInterpolate(CLUTCH_PADDLE_MAP_SIZE, rClutchPaddleMap, inputs->VrClutchPaddleRawAnalog, &(inputs->rClutchPaddleRawAnalog), VrCLUTCH_PADDLE_MARGIN_MIN, VrCLUTCH_PADDLE_MARGIN_MAX);
 
 
 	// Clutch Paddle Input Strategy
@@ -194,7 +194,7 @@ void ReadInputs(InputStruct *inputs){
 
 
 	// ---------------------------------------------------------------------------------------------------
-	// Up-Dn Shift Conditioning
+	// Up-Dn Shift Inputs
 
 	// CAN Input
 	inputs->BUpShiftButtonCANInError = BUpShiftButtonCANInError;
@@ -202,9 +202,13 @@ void ReadInputs(InputStruct *inputs){
 	inputs->BUpShiftButtonCAN = BUpShiftButtonCAN;
 	inputs->BDnShiftButtonCAN = BDnShiftButtonCAN;
 
-	// Analog Input
-	// TODO: Debouncing and STUCK detection ???
-	inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog03;
+	// Analog Input & Debouncing
+	if(tVUpDn < tInputsTimmer) {
+		inputs->VUpDnButtonAnalog = inputs->VSHIFTERAnalog03;
+		tVUpDn = tInputsTimmer + VUPDN_DEBOUNCE;
+	}
+
+	// STUCK detection ???
 
 	// Level checking
 	if(inputs->NBUpDnShiftButtonAnalog >= VUPDN_NOPRESS) {
@@ -264,11 +268,11 @@ void ReadInputs(InputStruct *inputs){
 	}
 
 	// ---------------------------------------------------------------------------------------------------
-	// Launch
+	// Launch Button
 
 	// Launch Input Strategy
 	if(inputs->BSteeringWheelFitted) {
-		inputs->BLaunchRequest = inputs->BSWButtonD;
+		inputs->BLaunchRequest = inputs->BSWButtonB;
 		inputs->BLaunchRequestInError = 0;
 	}
 	else {
@@ -276,45 +280,25 @@ void ReadInputs(InputStruct *inputs){
 		inputs->BLaunchRequest = 0;		// we force to zero if in error
 	}
 
-	// ---------------------------------------------------------------------------------------------------
-	// Toggle Switches
-
-	// Toggle 1
-	if(inputs->BSWButtonA && tToggleSwitch01 < tInputsTimmer) {
-		inputs->NToggleSwitch01State ^= 1;
-		tToggleSwitch01 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 2
-	if(inputs->BSWButtonB && tToggleSwitch02 < tInputsTimmer) {
-		inputs->NToggleSwitch02State ^= 1;
-		tToggleSwitch02 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 3
-	if(inputs->BSWButtonC && tToggleSwitch03 < tInputsTimmer) {
-		inputs->NToggleSwitch03State ^= 1;
-		tToggleSwitch03 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
-	// Toggle 4
-	if(inputs->BSWButtonE && tToggleSwitch04 < tInputsTimmer) {
-		inputs->NToggleSwitch04State ^= 1;
-		tToggleSwitch04 = tInputsTimmer + TOGGLE_SWITCH_DEBOUNCE;
-	}
-
 
 	// ---------------------------------------------------------------------------------------------------
-	// PCB Supply Voltage Conditioning
+	// Rotary Switch
+
+	inputs->VSwhitchA = inputs->VSHIFTERAnalog05;
+	inputs->BNSwitchAInError = My2DMapInterpolate(SWITCHA_MAP_SIZE, NSWitchAmap, inputs->VSwhitchA, &(inputs->NSwitchARaw), VNSWITCH_MARGIN, VNSWITCH_MARGIN);
+
+	inputs->NSwitchA = CLAMP((uint8_t)round(inputs->NSwitchARaw), 1, SWITCHA_MAP_SIZE);
+
+	// ---------------------------------------------------------------------------------------------------
+	// PCB Supply Voltage
 
 	inputs->VSupply = inputs->VSHIFTERAnalog01 / VSUPPLY_DIVIDER_GAIN;
 
 
 	// ---------------------------------------------------------------------------------------------------
-	// nEngine Conditioning
+	// nEngine
 
 	// CAN Input
-
 	if((tCANECULastSeen + ECU_COMMS_LOST_INTERVAL) < tInputsTimmer) {
 		inputs->BnEngineInError = 1;
 		inputs->BnEngineReliable = 0;
@@ -390,7 +374,40 @@ void ReadInputs(InputStruct *inputs){
 		}
 	}
 
+	// ---------------------------------------------------------------------------------------------------
+	// INPUTS  STATUS
 
+	inputs->NInputsStatusWord = 0;
+	inputs->NInputsStatusWord |= inputs->BNGearInError 					<< 0;
+	inputs->NInputsStatusWord |= inputs->BUpShiftButtonCANInError 		<< 1;
+	inputs->NInputsStatusWord |= inputs->BDnShiftButtonCANInError 		<< 2;
+	inputs->NInputsStatusWord |= inputs->BUpDnShiftButtonAnalogInError 	<< 3;
+	inputs->NInputsStatusWord |= inputs->BUpShiftRequestInError 		<< 4;
+	inputs->NInputsStatusWord |= inputs->BDnShiftRequestInError 		<< 5;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleRawCANInError 	<< 6;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleRawAnalogInError << 7;
+	inputs->NInputsStatusWord |= inputs->BrClutchPaddleInError 			<< 8;
+	inputs->NInputsStatusWord |= inputs->BLaunchRequestInError 			<< 9;
+	inputs->NInputsStatusWord |= inputs->BDeclutchRequestInError 		<< 10;
+	inputs->NInputsStatusWord |= inputs->BNSwitchAInError 				<< 11;
+	inputs->NInputsStatusWord |= inputs->BnEngineInError 				<< 12;
+	inputs->NInputsStatusWord |= !inputs->BSteeringWheelFitted 			<< 13;	// inverted in order to simulate the error state
+	inputs->NInputsStatusWord |= 0							 			<< 14;
+	inputs->NInputsStatusWord |= 0						 				<< 15;
+
+	inputs->NInputsStatusWord |= inputs->BDriverKill	 				<< 16;
+	inputs->NInputsStatusWord |= inputs->BUpShiftRequest 				<< 17;
+	inputs->NInputsStatusWord |= inputs->BDnShiftRequest 				<< 18;
+	inputs->NInputsStatusWord |= inputs->BFalseNeutral	 				<< 19;
+	inputs->NInputsStatusWord |= 0										<< 20;
+	inputs->NInputsStatusWord |= 0										<< 21;
+	inputs->NInputsStatusWord |= 0										<< 22;
+	inputs->NInputsStatusWord |= 0										<< 23;
+	inputs->NInputsStatusWord |= inputs->BLaunchRequest	 				<< 24;
+	inputs->NInputsStatusWord |= inputs->BDeclutchRequest 				<< 25;
+	inputs->NInputsStatusWord |= (inputs->NrClutchPaddleSource & 0x02)	<< 26;	// 2 bits (26,27)
+	inputs->NInputsStatusWord |= (inputs->NBUpshiftRequestSource & 0x02)<< 28;	// 2 bits (28,29)
+	inputs->NInputsStatusWord |= (inputs->NBDnshiftRequestSource & 0x02)<< 30;	// 2 bits (30,31)
 
 	// ---------------------------------------------------------------------------------------------------
 
@@ -399,11 +416,6 @@ void ReadInputs(InputStruct *inputs){
 void InitInputs(void) {
 	HAL_ADCEx_Calibration_Start(&hadc1);
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcRawValue, ADC_BUFFER_SIZE);
-}
-
-uint8_t CheckFaults(InputStruct *inputs) {
-	if(inputs->nFaultStatus) return 1;
-	return 0;
 }
 
 void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
@@ -419,7 +431,7 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 //Don't forget to add and enable filters for each message
 	switch(RxHeader.StdId) {
 
-	 case SIU_RX_ID :
+	 case SIU_TX_ID01 :
 		 tCANSteeringWheelLastSeen = HAL_GetTick();
 
 		 BUpShiftButtonCANInError 		= (RxBuffer[0] >> 0) & 0x01;
@@ -440,9 +452,9 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 
 		 break;
 
-	 case ECU_RX_ID:
+	 case ECU_TX_ID01:
 		 tCANECULastSeen = HAL_GetTick();
-		 nEngineRawCAN = (uint16_t)(RxBuffer[0] << 8 | RxBuffer[1]);
+		 nEngineRawCAN = (uint16_t)(RxBuffer[1] << 8 | RxBuffer[0]);
 		 break;
 
 	 default:
@@ -450,17 +462,6 @@ void CAN_RX(CAN_HandleTypeDef *hcan, uint32_t RxFifo) {
 	 }
 }
 
-
-uint8_t calculateActualNGear(uint16_t NGear, uint16_t NGearRaw) {
-
-    for (uint8_t gear = 0; gear < TOTAL_GEARS; ++gear) {
-        if (NGearRaw >= NGearMap[gear][0] && NGearRaw <= NGearMap[gear][1]) {
-        	NGear = gear;
-        	return 0;
-        }
-    }
-    return 1; // If no match found, return error!
-}
 
 
 uint16_t MyHalfBufferAverage(uint16_t *buffer, uint16_t halfsize, uint8_t side, uint8_t offset) {
