@@ -91,8 +91,8 @@ void WriteOutputs(InputStruct *inputs, OutputStruct *outputs) {
 	// Toggle Switches
 	// output->BSWLEDA
 
-	uint8_t BLaunchButtonCANSW = output->BLaunchControl;
-	uint8_t BSparkCutCANSW = output->BSparkCut;
+	uint8_t BLaunchButtonCANSW = outputs->BLaunchControl;
+	uint8_t BSparkCutCANSW = outputs->BSparkCut;
 
 	// ECU control
 

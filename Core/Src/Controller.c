@@ -196,7 +196,16 @@ void Controller(InputStruct *inputs, OutputStruct *outputs){
 
 		// we take the maximum target generated from the Antistall/Protection strategy, the one request
 		// from the driver and the shifter requests when enabled from the respective strategy
-		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
+		// MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MAX(MyOutputs->xClutchTargetManual, MyOutputs->xClutchTargetShift));
+
+
+		// TODO: here consider to do min(max(protection,manual), shift (when !=0)).
+		// we do this, because we want to slightly move the layshaft so that the teeth are not stopped one on top of the other
+		// for this reason we need to also select a shift clutch target that is the bite point which is almost dragging the clutch to create some movement.
+		// all this is mainly useful when the car is stationary (i.e. to put neutral !!)
+
+		MyOutputs->xClutchTarget = MAX(MyOutputs->xClutchTargetProtection, MyOutputs->xClutchTargetManual);
+		MyOutputs->xClutchTarget = (MyOutputs->xClutchTargetShift != MyOutputs->xClutchTargetMin ? MyOutputs->xClutchTargetShift : MyOutputs->xClutchTarget);
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -485,7 +494,7 @@ void PRE_UPSHIFT_Event(void) {
 			MyOutputs->BOverrideActuateClutchOnNextUpShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShiftShadow = 0;
+			MyOutputs->xClutchTargetShiftShadow = MyOutputs->xClutchTargetMin;
 		}
 
 		if((MyOutputs->NUpShiftType == SparkCut || MyOutputs->NUpShiftType == WithClutchAndSparkCut) && ALLOW_SPARK_CUT_ON_UP_SHIFT) MyOutputs->BSparkCut = 1;
@@ -551,7 +560,7 @@ void PRE_DNSHIFT_Event(void) {
 			MyOutputs->BOverrideActuateClutchOnNextDnShift = 0; 									// reset the strat for the next gear
 		}
 		else {
-			MyOutputs->xClutchTargetShiftShadow = 0;
+			MyOutputs->xClutchTargetShiftShadow = MyOutputs->xClutchTargetMin;
 		}
 
 		if((MyOutputs->NDnShiftType == SparkCut || MyOutputs->NDnShiftType == WithClutchAndSparkCut) && ALLOW_SPARK_CUT_ON_DN_SHIFT) MyOutputs->BSparkCut = 1;
@@ -698,8 +707,8 @@ void POSTSHIFT_Entry(void) {
 	MyOutputs->BDnShiftPortStateShadow = 0;
 
 	// reset all control variables for the next actuation
-	MyOutputs->xClutchTargetShiftShadow = 0;
-	MyOutputs->xClutchTargetShift = 0;
+	MyOutputs->xClutchTargetShiftShadow = MyOutputs->xClutchTargetMin;
+	MyOutputs->xClutchTargetShift = MyOutputs->xClutchTargetMin;
 	MyOutputs->BSparkCut = 0;
 
 }
@@ -750,8 +759,8 @@ void ERROR_Entry(void) {
 	// reset all actuator states
 	MyOutputs->BUpShiftPortState = 0;
 	MyOutputs->BDnShiftPortState = 0;
-	MyOutputs->xClutchTargetShiftShadow = 0;
-	MyOutputs->xClutchTargetShift = 0;
+	MyOutputs->xClutchTargetShiftShadow = MyOutputs->xClutchTargetMin;
+	MyOutputs->xClutchTargetShift = MyOutputs->xClutchTargetMin;
 	MyOutputs->BSparkCut = 0;
 
 }
